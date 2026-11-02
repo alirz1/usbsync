@@ -1,0 +1,14 @@
+{
+    ".url": {
+        "com.alirz.usbsync": {
+            "type": "url",
+            "icon": "images/icon_{0}.png",
+            "title": "USB Sync",
+            "desc": "Sync shared folders to and from external USB drives with rsync",
+            "allUsers": false,
+            "protocol": "http",
+            "port": "8765",
+            "url": "/"
+        }
+    }
+}

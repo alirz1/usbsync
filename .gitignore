@@ -1,0 +1,13 @@
+# build output and packages
+build/
+dist/
+*.spk
+*.zip
+# test data, logs and screenshots
+testdata/
+testfs/
+testserver.log
+shots/
+# editor/OS junk
+.DS_Store
+*.swp

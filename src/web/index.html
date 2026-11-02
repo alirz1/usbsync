@@ -1,0 +1,2309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>USB Sync</title>
+<link rel="icon" href="icon.png">
+<style>
+:root{
+  --bg:#f3f5f8; --panel:#ffffff; --panel2:#f8f9fb; --line:#e3e7ed; --line2:#eef1f5;
+  --text:#1d2633; --muted:#6a7584; --faint:#9aa3af;
+  --accent:#1a73e8; --accent-weak:#e8f0fe; --accent-text:#ffffff;
+  --ok:#1e8e3e; --ok-weak:#e6f4ea; --warn:#b06000; --warn-weak:#fef3e0; --bad:#c5221f; --bad-weak:#fce8e6;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+  --radius:10px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#14171c; --panel:#1c2027; --panel2:#20252d; --line:#2e343e; --line2:#262b33;
+  --text:#e6e9ee; --muted:#9aa3af; --faint:#6b7480;
+  --accent:#5b9cf5; --accent-weak:#1f2d44; --accent-text:#0b1220;
+  --ok:#5bbf73; --ok-weak:#1b2e22; --warn:#e3a54a; --warn-weak:#33281a; --bad:#f07a74; --bad-weak:#3a1f1f;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+svg.i{width:16px;height:16px;flex:none;vertical-align:-3px}
+
+/* header */
+header{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px;white-space:nowrap}
+.brand img{width:26px;height:26px}
+nav{display:flex;gap:2px;margin-left:8px}
+nav button{border:0;background:none;padding:7px 12px;border-radius:7px;cursor:pointer;color:var(--muted);font-weight:500}
+nav button:hover{background:var(--line2);color:var(--text)}
+nav button.on{background:var(--accent-weak);color:var(--accent)}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:500;background:var(--line2);color:var(--muted);white-space:nowrap}
+.pill.run{background:var(--accent-weak);color:var(--accent);cursor:pointer}
+.pill.success{background:var(--ok-weak);color:var(--ok)}
+.pill.warning{background:var(--warn-weak);color:var(--warn)}
+.pill.failed{background:var(--bad-weak);color:var(--bad)}
+.pill.cancelled,.pill.queued{background:var(--line2);color:var(--muted)}
+.pill.running{background:var(--accent-weak);color:var(--accent)}
+.user{color:var(--muted);font-size:13px;white-space:nowrap}
+.linkbtn{border:0;background:none;color:var(--accent);cursor:pointer;padding:4px 6px;border-radius:6px}
+.linkbtn:hover{background:var(--accent-weak)}
+
+main{padding:18px 20px 120px;max-width:1400px;margin:0 auto}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{color:var(--bad)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.iconbtn{border:0;background:none;padding:5px;border-radius:6px;cursor:pointer;color:var(--muted);display:inline-flex}
+.iconbtn:hover{background:var(--line2);color:var(--text)}
+
+/* direction switch */
+.dirbar{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;box-shadow:var(--shadow)}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:7px;cursor:pointer;color:var(--muted);font-weight:500;display:flex;align-items:center;gap:8px}
+.seg button.on{background:var(--accent);color:var(--accent-text)}
+.hint{color:var(--muted);font-size:13px}
+
+/* panes */
+.panes{display:grid;grid-template-columns:minmax(0,1fr) 44px minmax(0,1fr);gap:0;align-items:stretch}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:440px;max-height:calc(100vh - 330px);overflow:hidden}
+.pane-h{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.pane-h .t{font-weight:600}
+.role{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 8px;border-radius:5px}
+.role.src{background:var(--accent-weak);color:var(--accent)}
+.role.dst{background:var(--ok-weak);color:var(--ok)}
+.pane-sub{padding:8px 14px;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--line2);background:var(--panel2)}
+.tree{overflow:auto;flex:1;padding:6px 0}
+.arrowcol{display:flex;align-items:center;justify-content:center;color:var(--accent)}
+.arrowcol svg{width:26px;height:26px}
+
+.vol{padding:10px 14px 4px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.row{display:flex;align-items:center;gap:6px;padding:3px 12px 3px 0;cursor:pointer;user-select:none;min-height:30px}
+.row:hover{background:var(--panel2)}
+.row.sel{background:var(--accent-weak)}
+.row.dsel{background:var(--ok-weak)}
+.row.locked{color:var(--faint);cursor:default}
+.row .caret{border:0;background:none;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--faint);border-radius:5px;flex:none;padding:0}
+.row .caret:hover{background:var(--line2);color:var(--text)}
+.row .caret svg{transition:transform .12s}
+.row .caret.open svg{transform:rotate(90deg)}
+.row .pick{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;margin:0 -2px;border-radius:6px;flex:none;cursor:pointer}
+.row .pick:hover{background:var(--line2)}
+.row input{margin:0;flex:none;accent-color:var(--accent);cursor:pointer}
+.row input[type=radio]{accent-color:var(--ok)}
+.row .fold{color:#e8a33d}
+.row .drv{color:var(--accent)}
+.row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .meta{margin-left:auto;font-size:12px;color:var(--faint);padding-left:10px;white-space:nowrap}
+.row .lock{color:var(--warn)}
+.empty-row{padding:4px 0;color:var(--faint);font-size:12.5px;font-style:italic}
+
+/* drives */
+.drives{display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);overflow-x:auto}
+.drive{flex:1 1 0;min-width:170px;border:1px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer;background:var(--panel)}
+.drive:hover{border-color:var(--accent)}
+.drive.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak) inset;background:var(--accent-weak)}
+.drive .dn{font-weight:600;display:flex;gap:7px;align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drive .dm{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:5px;border-radius:9px;background:var(--line2);margin-top:7px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:9px}
+.bar.full>i{background:var(--warn)}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.empty svg{width:40px;height:40px;color:var(--faint);margin-bottom:8px}
+
+/* summary + options */
+.summary{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px}
+.summary .line{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);padding:2px 4px 2px 9px;border-radius:7px;font-size:13px;max-width:100%}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip button{border:0;background:none;cursor:pointer;color:var(--faint);padding:2px;display:inline-flex;border-radius:4px}
+.chip button:hover{color:var(--bad);background:var(--bad-weak)}
+.chip.dst{background:var(--ok-weak);border-color:transparent;padding-right:9px}
+.lbl{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;min-width:96px;padding-top:3px}
+.result-note{font-size:12.5px;color:var(--muted);margin-top:8px}
+.opts{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)}
+.opts label{display:flex;gap:7px;align-items:center;cursor:pointer}
+.opts label input{accent-color:var(--accent)}
+.opts .warnopt{color:var(--warn)}
+details.more{margin-top:10px}
+details.more summary{cursor:pointer;color:var(--muted);font-size:13px}
+textarea{width:100%;min-height:70px;border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--panel2);resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+.actions{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;align-items:center;z-index:4}
+.actions .msg{color:var(--muted);font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.actions .notifyopt{font-size:13px;white-space:nowrap;margin-right:4px}
+
+.banner{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px}
+.banner.info{background:var(--accent-weak);color:var(--text)}
+.banner.warn{background:var(--warn-weak)}
+.banner b{font-weight:600}
+.banner .x{margin-left:auto}
+
+/* jobs / activity */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:12px}
+.card h3{margin:0;font-size:15px}
+.job{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center}
+.job .route{font-size:13px;color:var(--muted);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.job .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.sectiontitle{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
+.sectiontitle h2{font-size:16px;margin:0}
+.prog{height:10px;border-radius:9px;background:var(--line2);overflow:hidden;margin:12px 0 8px}
+.prog>i{display:block;height:100%;background:var(--accent);transition:width .4s}
+.prog.paused>i{background:var(--warn)}
+.prog.small{height:6px;margin:6px 0 4px;max-width:520px}
+.prog.indet>i{width:30%;animation:indet 1.3s ease-in-out infinite}
+@keyframes indet{0%{margin-left:-30%}100%{margin-left:100%}}
+.curfile{margin-top:10px;padding-top:10px;border-top:1px solid var(--line2)}
+.curfile .cur{margin-top:0}
+.stats{display:flex;gap:22px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.stats b{color:var(--text);font-weight:600}
+.cur{font-size:12.5px;color:var(--muted);margin-top:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Menlo,Consolas,monospace}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+td.msgc{color:var(--muted);max-width:420px}
+.tw{overflow-x:auto}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(10,15,25,.45);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal{background:var(--panel);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.25);width:100%;max-width:440px;padding:20px}
+.modal.wide{max-width:900px;height:min(80vh,800px);display:flex;flex-direction:column}
+.modal h3{margin:0 0 14px;font-size:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px;font-weight:500}
+.field input,.field select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2)}
+.field input:focus,.field select:focus,textarea:focus{outline:2px solid var(--accent-weak);border-color:var(--accent)}
+.frow{display:flex;gap:10px}
+.frow .field{flex:1}
+.mbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+pre.log{flex:1;overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;margin:0;font-size:12px;white-space:pre-wrap;word-break:break-all}
+.err{color:var(--bad);font-size:13px;min-height:18px}
+
+/* login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:28px}
+.login .brand{justify-content:center;font-size:18px;margin-bottom:6px}
+.login .brand img{width:40px;height:40px}
+.login p{text-align:center;color:var(--muted);margin:0 0 20px;font-size:13px}
+.login .btn{width:100%;justify-content:center;padding:9px}
+
+.toast{position:fixed;right:20px;bottom:80px;z-index:30;display:flex;flex-direction:column;gap:8px}
+.toast div{background:var(--text);color:var(--bg);padding:10px 14px;border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.2);max-width:420px;font-size:13px}
+.toast div.bad{background:var(--bad);color:#fff}
+
+.drafttabs{display:flex;gap:4px;align-items:flex-end;border-bottom:1px solid var(--line);margin:-4px 0 14px;overflow-x:auto}
+.dtab{display:inline-flex;align-items:center;gap:6px;padding:7px 8px 7px 14px;border:1px solid transparent;border-bottom:0;border-radius:9px 9px 0 0;cursor:pointer;color:var(--muted);font-weight:500;white-space:nowrap;max-width:260px;margin-bottom:-1px;background:none}
+.dtab:hover{color:var(--text);background:var(--line2)}
+.dtab.on{background:var(--panel);border-color:var(--line);color:var(--text);box-shadow:0 -1px 2px rgba(16,24,40,.04)}
+.dtab .lbl2{overflow:hidden;text-overflow:ellipsis}
+.dtab .x{border:0;background:none;padding:2px;border-radius:5px;display:inline-flex;color:var(--faint);cursor:pointer}
+.dtab .x:hover{background:var(--bad-weak);color:var(--bad)}
+.dtab.add{padding:7px 10px;color:var(--accent)}
+.modechoice{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;margin-top:12px}
+.rules{margin-top:12px;padding-top:12px;border-top:1px solid var(--line2)}
+.rules-h{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px}
+.cmpgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+.cmp{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:9px 11px;cursor:pointer;background:var(--panel)}
+.cmp:hover{border-color:var(--accent)}
+.cmp:has(input:checked){border-color:var(--accent);background:var(--accent-weak)}
+.cmp input{margin-top:3px;accent-color:var(--accent)}
+.cmp b{display:block;font-weight:600;font-size:13.5px}
+.cmp span{display:block;font-size:12px;color:var(--muted);line-height:1.35;margin-top:2px}
+.filters{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:12px}
+.fgroup{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.flabel{font-weight:600;font-size:13px;margin-right:4px}
+.fgroup input,.fgroup select{padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--panel2)}
+.num{width:80px}
+.opts label.disabled{opacity:.45;pointer-events:none}
+
+/* report */
+.report{position:fixed;inset:0;background:var(--bg);z-index:15;display:flex;flex-direction:column}
+.report.inline{position:static;inset:auto;z-index:auto;background:none;display:block}
+.report.inline .rep-h{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow)}
+.report.inline .rep-body{padding:14px 0 30px;max-width:none;overflow:visible}
+.dtab .pv{color:var(--accent);display:inline-flex}
+.rep-h{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
+.rep-title{font-weight:600;font-size:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rep-sub{font-size:12.5px;color:var(--muted)}
+.rep-body{flex:1;overflow:auto;padding:18px 20px 30px;max-width:1400px;width:100%;margin:0 auto}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow);cursor:pointer}
+.stat:hover{border-color:var(--accent)}
+.stat.on{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-weak)}
+.stat .k{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+.stat .v{font-size:24px;font-weight:650;margin-top:2px}
+.stat .s{font-size:12.5px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.c-new{color:var(--ok)}.bg-new{background:var(--ok)}
+.c-update{color:var(--accent)}.bg-update{background:var(--accent)}
+.c-delete{color:var(--bad)}.bg-delete{background:var(--bad)}
+.c-unchanged{color:var(--faint)}.bg-unchanged{background:var(--faint)}
+.critline{font-size:13px;color:var(--muted);margin:2px 0 14px}
+.critline b{color:var(--text);font-weight:600}
+.reptabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.reptabs button{border:0;background:none;padding:8px 14px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.reptabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.ftools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.fchip{border:1px solid var(--line);background:var(--panel);padding:4px 11px;border-radius:99px;cursor:pointer;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.fchip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.fchip.on .dot{background:var(--accent-text)!important}
+.search{margin-left:auto;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);min-width:220px}
+.ftable{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.rrow{display:grid;grid-template-columns:minmax(0,1fr) 130px 200px 90px;gap:10px;align-items:center;padding:5px 14px 5px 0;border-bottom:1px solid var(--line2);font-size:13px;min-height:32px}
+.rrow.head{font-size:12px;font-weight:600;color:var(--muted);background:var(--panel2);padding-left:14px}
+.rrow.dirrow{cursor:pointer}
+.rrow.dirrow:hover{background:var(--panel2)}
+.rrow .fold{color:#e8a33d}
+.rrow .caret svg{transition:transform .12s}
+.rrow .caret.open svg{transform:rotate(90deg)}
+.rrow .nmcell{display:flex;align-items:center;gap:6px;min-width:0}
+.rrow .nmcell span.n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow .why{color:var(--muted);font-size:12.5px}
+.rrow .sz{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.badges{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;font-variant-numeric:tabular-nums}
+.st{font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:5px;white-space:nowrap;justify-self:start}
+.st.new{background:var(--ok-weak);color:var(--ok)}
+.st.update{background:var(--accent-weak);color:var(--accent)}
+.st.delete{background:var(--bad-weak);color:var(--bad)}
+.st.unchanged{background:var(--line2);color:var(--muted)}
+.st.newdir{background:var(--ok-weak);color:var(--ok)}
+.more-row{padding:7px 14px;color:var(--faint);font-size:12.5px;font-style:italic;border-bottom:1px solid var(--line2)}
+.errlist{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.errlist div{padding:8px 14px;border-bottom:1px solid var(--line2);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-all}
+.errlist div:last-child{border-bottom:0}
+.feed{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);overflow:hidden}
+.feed .fh{padding:9px 14px;font-size:12px;font-weight:600;color:var(--muted);background:var(--panel2);border-bottom:1px solid var(--line)}
+.feed .fi{display:grid;grid-template-columns:110px minmax(0,1fr) 90px;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid var(--line2);font-size:13px}
+.feed .fi:last-child{border-bottom:0}
+.feed .fi .p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left}
+.checking{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:2px 0 14px}
+.livecounts{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-top:10px}
+@media (max-width:860px){
+  .frow{grid-template-columns:minmax(0,1fr) 92px 70px}
+  .rrow .why{display:none}
+  .search{margin-left:0;min-width:0;width:100%}
+}
+
+@media (max-width:860px){
+  .panes{grid-template-columns:1fr}
+  .arrowcol{height:36px}
+  .arrowcol svg{transform:rotate(90deg)}
+  .pane{max-height:none;min-height:300px}
+  nav{margin-left:0}
+  header{flex-wrap:wrap}
+  .job{grid-template-columns:1fr}
+  .job .btns{justify-content:flex-start}
+}
+
+/* ===== 1.4 layout: denser, touch friendly ===== */
+main{padding:12px 16px 96px}
+header{padding:8px 16px;gap:12px}
+.card{padding:12px 14px;margin-bottom:10px}
+.dirbar{margin-bottom:10px;gap:10px}
+.seg button{padding:6px 12px}
+#dirHint{display:none}
+
+/* panes */
+.panes{grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr)}
+.pane{min-height:300px;max-height:calc(100vh - 300px)}
+.pane-h{padding:8px 12px;gap:8px;min-height:44px}
+.pane-sub{padding:5px 12px;font-size:12px}
+.tree{padding:2px 0}
+.row{min-height:34px;padding:2px 10px 2px 0}
+.arrowcol svg{width:20px;height:20px}
+
+/* drives as compact chips */
+.drives{gap:6px;padding:8px 10px}
+.drive{min-width:150px;padding:6px 10px;border-radius:8px}
+.drive .dn{font-size:13.5px}
+.drive .dm{font-size:11.5px;margin-top:1px}
+.drive .bar{height:4px;margin-top:5px}
+
+/* plan: what will be copied + rules */
+.plan{margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 14px}
+.planrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px}
+.planlbl{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.planarrow{color:var(--accent);display:inline-flex}
+.modeline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.result-note{margin-top:6px;font-size:12px}
+.seg.sm label,.seg.wrap label{position:relative;display:inline-flex;align-items:center;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--muted);font-weight:500;font-size:13px;white-space:nowrap}
+.seg.sm input,.seg.wrap input{position:absolute;opacity:0;pointer-events:none}
+.seg.sm label:has(input:checked),.seg.wrap label:has(input:checked){background:var(--accent);color:var(--accent-text)}
+.seg.sm label:has(input:focus-visible),.seg.wrap label:has(input:focus-visible){outline:2px solid var(--accent)}
+.seg.wrap{flex-wrap:wrap}
+.optpanel{margin-top:10px;border-top:1px solid var(--line2);padding-top:6px}
+.optpanel>summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;min-height:36px;color:var(--text)}
+.optpanel>summary::-webkit-details-marker{display:none}
+.optpanel .ol{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;flex:none}
+.optpanel .rsum{flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.optpanel .edit{color:var(--accent);font-size:13px;font-weight:500;flex:none}
+.optpanel[open] .edit{visibility:hidden}
+.optbody{display:grid;gap:10px;padding:8px 0 4px}
+.og{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px;align-items:start}
+.ogl{font-size:12.5px;font-weight:600;color:var(--muted);padding-top:7px}
+.ogc .hint{margin-top:5px;font-size:12px}
+.switches{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 16px}
+.sw{display:flex;align-items:center;gap:10px;cursor:pointer;min-height:34px;font-size:13.5px}
+.sw input{position:absolute;opacity:0;pointer-events:none}
+.sw i{flex:none;width:34px;height:20px;border-radius:20px;background:var(--line);position:relative;transition:background .15s}
+.sw i::after{content:"";position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.sw input:checked+i{background:var(--accent)}
+.sw.warnopt input:checked+i{background:var(--warn)}
+.sw input:checked+i::after{transform:translateX(14px)}
+.sw input:focus-visible+i{outline:2px solid var(--accent);outline-offset:2px}
+.sw.disabled{opacity:.45;pointer-events:none}
+.fgroup{gap:6px}
+#optExcludes{min-height:44px;font-size:12.5px}
+.chip{padding:3px 4px 3px 9px}
+
+/* report: slim stat strip */
+.statgrid{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}
+.stat{padding:8px 12px}
+.stat .v{display:inline-block;font-size:19px;margin:1px 6px 0 0}
+.stat .s{display:inline-block;font-size:12px}
+.rep-h{padding:8px 16px;gap:10px}
+.rep-body{padding:12px 16px 30px}
+.critline{margin:0 0 10px;line-height:1.6}
+.exchips{display:inline-flex;flex-wrap:wrap;gap:4px;vertical-align:middle}
+.exchips code{background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:0 6px;font-size:12px}
+.banner{padding:8px 12px;margin-bottom:10px}
+.rrow{min-height:32px}
+.feed .fi{padding:5px 14px}
+
+/* activity + jobs */
+.prog{height:8px;margin:10px 0 6px}
+.livecounts{margin-top:8px}
+.job .tags{margin-top:6px}
+
+/* ---- touch screens: finger-sized targets ---- */
+@media (pointer:coarse){
+  body{font-size:15px}
+  .btn{min-height:44px;padding:8px 16px}
+  .btn.sm{min-height:40px;padding:6px 12px}
+  .iconbtn{min-width:40px;min-height:40px;justify-content:center}
+  .linkbtn{min-height:40px;padding:8px 10px}
+  nav button{padding:10px 14px}
+  .seg button,.seg.sm label,.seg.wrap label{min-height:40px;padding:8px 14px}
+  .row{min-height:46px}
+  .row .caret{width:38px;height:38px}
+  .row .pick{width:40px;height:40px}
+  .row input{transform:scale(1.3)}
+  .sw{min-height:44px}
+  .dtab{padding:10px 10px 10px 14px}
+  .dtab .x{padding:6px}
+  .rrow{min-height:44px}
+  .fchip{min-height:38px;padding:6px 14px}
+  .drive{padding:8px 12px}
+  .optpanel>summary{min-height:44px}
+  .fgroup input,.fgroup select{min-height:40px}
+  .chip button{padding:6px}
+}
+
+/* ---- narrow screens ---- */
+@media (max-width:860px){
+  .panes{grid-template-columns:1fr}
+  .arrowcol{height:28px}
+  .arrowcol svg{transform:rotate(90deg)}
+  .pane{min-height:220px;max-height:55vh}
+}
+@media (max-width:560px){
+  header{flex-wrap:nowrap;padding:6px 10px;gap:6px}
+  header .brand span,header .brand{font-size:0}
+  header .brand img{width:28px;height:28px}
+  nav{margin-left:0;gap:0}
+  nav button{padding:8px 10px}
+  #hdrRun{display:none!important}
+  .pane-h .t{font-size:14px}
+  .role{font-size:10px;padding:2px 6px}
+  .drive{min-width:0;flex:1 1 140px}
+  .dirbar .seg{flex:1}
+  .dirbar .seg button{flex:1;justify-content:center}
+}
+@media (max-width:760px){
+  main{padding:10px 10px 140px}
+  .og{grid-template-columns:1fr;gap:4px}
+  .ogl{padding-top:0}
+  .switches{grid-template-columns:1fr}
+  .actions{flex-wrap:wrap;padding:8px 10px;gap:8px}
+  .actions .msg{flex-basis:100%;order:-1;white-space:normal}
+  .actions .btn{flex:1;justify-content:center}
+  #histBody tr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:10px 6px;border-bottom:1px solid var(--line2)}
+  #histBody td{border:0;padding:0}
+  #histBody td.msgc{flex-basis:100%;max-width:none}
+  table thead{display:none}
+  .statgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .stat{padding:6px 10px}
+  .stat .k{font-size:11.5px}
+  .stat .v{font-size:17px}
+  .critline{font-size:12.5px;word-break:break-all}
+  .rep-h{flex-wrap:wrap}
+}
+
+/* ===== 1.5: aligned panes, file rows, drive chips ===== */
+.drives{display:flex;gap:6px;padding:0;border:0;overflow-x:auto;flex-wrap:nowrap}
+.drives.hidden{display:none}
+.drive{display:inline-grid;grid-template-columns:auto auto;grid-template-rows:auto auto;column-gap:7px;row-gap:2px;align-items:center;
+  min-width:0;flex:none;padding:5px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer;text-align:left;color:var(--text);font:inherit}
+.drive .drv{grid-row:1/3}
+.drive .dn{font-weight:600;font-size:13px;white-space:nowrap}
+.drive .dm{grid-column:2;font-size:11px;color:var(--muted);white-space:nowrap;display:none}
+.drive .bar{grid-column:2;height:3px;margin:0;min-width:70px;border-radius:3px;background:var(--line2);overflow:hidden;display:block}
+.drive .bar>i{display:block;height:100%;background:var(--accent)}
+.drive .bar.full>i{background:var(--warn)}
+.drive.on{border-color:var(--accent);background:var(--accent-weak);box-shadow:none}
+.pane-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row.head{min-height:30px;padding:0 10px 0 12px;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);
+  background:var(--panel2);border-bottom:1px solid var(--line2);gap:6px;cursor:default}
+.row.head .nm{flex:1}
+.row.head .meta{text-transform:none;letter-spacing:0;font-weight:400}
+.row.head[data-path]{cursor:pointer}
+.row.head .pick{width:22px;height:22px;margin:0 -2px 0 -6px}
+.row.head.dsel{background:var(--ok-weak)}
+.row.head.sel{background:var(--accent-weak)}
+.vol{padding:0}
+.caret-sp{width:22px;flex:none}
+.row.filerow .nm{color:var(--muted)}
+.row.filerow .fil{color:var(--faint)}
+.row.filerow .meta{font-size:11.5px}
+.row.excl .nm{text-decoration:line-through;color:var(--faint)}
+.row.excl .fold{opacity:.5}
+.chip .exc{font-size:11.5px;font-weight:600;color:var(--warn);background:var(--warn-weak);border-radius:5px;padding:0 5px}
+@media (pointer:coarse){
+  .row.head{min-height:40px}
+  .row.head .pick{width:36px;height:36px}
+  .caret-sp{width:38px}
+  .drive{padding:8px 12px}
+}
+@media (max-width:860px){ .drives{order:5;flex-basis:100%} }
+/* horizontally scrolling bars: never a vertical scrollbar (showed tiny up/down arrows on Windows) */
+.drives,.drafttabs{overflow-y:hidden;scrollbar-width:thin}
+.drafttabs{border-bottom:0;box-shadow:inset 0 -1px 0 var(--line)}
+.dtab{margin-bottom:0}
+
+.modal.settings{max-width:520px;max-height:90vh;overflow:auto}
+.modal .sect{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:14px 0 6px;padding-top:12px;border-top:1px solid var(--line2)}
+.modal .sect:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.chan{border:1px solid var(--line);border-radius:9px;padding:6px 12px;margin-top:8px}
+.chanbody{padding:6px 0 8px}
+
+.drive.offline{opacity:.75;border-style:dashed}
+.drive.offline .dm{display:inline;color:var(--warn)}
+.offnote{display:flex;gap:10px;padding:14px;font-size:13px;color:var(--muted);line-height:1.5}
+.offnote svg{flex:none;color:var(--warn);margin-top:2px}
+.offnote ul{margin:6px 0 8px;padding-left:18px;color:var(--text)}
+
+.pairlist{margin-bottom:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.pairhead{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--panel2);padding:6px 12px;border-bottom:1px solid var(--line2)}
+.pairrow{display:flex;align-items:center;gap:10px;padding:6px 12px;border-bottom:1px solid var(--line2);min-height:38px;font-size:13.5px}
+.pairrow:last-child{border-bottom:0}
+.pairrow.editing{background:var(--accent-weak)}
+.pairrow .pnum{flex:none;width:22px;height:22px;border-radius:50%;background:var(--line2);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.pairrow .ptxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pairrow .parrow{color:var(--accent)}
+.pairrow .hint{margin-left:6px;font-size:12px}
+.linkbtn.danger{color:var(--bad)}
+@media (pointer:coarse){ .pairrow{min-height:46px} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-folder" viewBox="0 0 24 24"><path fill="currentColor" d="M3 6.5A2.5 2.5 0 0 1 5.5 4h4l2 2.2h7A2.5 2.5 0 0 1 21 8.7v8.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/></symbol>
+  <symbol id="i-drive" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M7 3h10v7H7zM5 10h14v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM10 6h1M13 6h1M9 16h.01"/></symbol>
+  <symbol id="i-nas" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM8 7h8M8 11h8M8 15h.01M11 15h.01"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M4 12h15m-5-6 6 6-6 6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 0 0-14.6-4.5M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5M20 20v-4h-4"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 3h11l3 3v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM7 3v5h8V3M7 21v-7h10v7"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" d="M6 3h8l4 4v14H6zM14 3v4h4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></g></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></symbol>
+  <symbol id="i-eject" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4 4 14h16zM4 17h16v3H4z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 7v5l3 2"/></symbol>
+</svg>
+
+<!-- Login -->
+<div id="loginView" class="login-wrap hidden">
+  <form class="login" id="loginForm" autocomplete="on">
+    <div class="brand"><img src="icon.png" alt=""> USB Sync</div>
+    <p>Sign in with your DSM administrator account</p>
+    <div class="field"><label for="lu">Username</label><input id="lu" autocomplete="username" required></div>
+    <div class="field"><label for="lp">Password</label><input id="lp" type="password" autocomplete="current-password" required></div>
+    <div class="field hidden" id="otpField"><label for="lo">Two-factor code</label><input id="lo" inputmode="numeric" autocomplete="one-time-code"></div>
+    <div class="err" id="loginErr"></div>
+    <button class="btn primary" type="submit" id="loginBtn">Sign in</button>
+  </form>
+</div>
+
+<!-- App -->
+<div id="appView" class="hidden">
+<header>
+  <div class="brand"><img src="icon.png" alt=""> USB Sync</div>
+  <nav>
+    <button data-tab="sync" class="on">Sync</button>
+    <button data-tab="jobs">Jobs <span id="jobCount" class="pill" style="margin-left:4px;padding:0 7px">0</span></button>
+    <button data-tab="activity">Activity</button>
+  </nav>
+  <div class="spacer"></div>
+  <span id="hdrRun" class="pill run hidden"></span>
+  <span class="user" id="whoami"></span>
+  <button class="linkbtn" id="logoutBtn">Sign out</button>
+  <button class="iconbtn" id="settingsBtn" title="Settings"><svg class="i" style="width:18px;height:18px"><use href="#i-gear"/></svg></button>
+</header>
+
+<main>
+  <!-- SYNC TAB -->
+  <section id="tab-sync">
+    <div class="drafttabs" id="draftTabs"></div>
+    <div id="setupArea">
+    <div id="editBanner" class="banner info hidden">
+      <svg class="i"><use href="#i-info"/></svg>
+      <div>Editing job <b id="editName"></b>. Change folders or options, then choose <b>Update job</b>.</div>
+      <button class="linkbtn x" id="cancelEdit">Stop editing</button>
+    </div>
+    <div id="permBanner" class="banner warn hidden">
+      <svg class="i" style="color:var(--warn)"><use href="#i-lock"/></svg>
+      <div><b>Some folders are locked to USB Sync.</b> To allow access, open DSM <b>Control Panel › Shared Folder</b>, edit the folder (and the USB drive's <i>usbshare</i> folder), open <b>Permissions</b>, switch the list to <b>System internal user</b>, and tick <b>Read/Write</b> for <b id="pkgUserName">USBSync</b>.</div>
+      <button class="linkbtn x" id="permDismiss">Dismiss</button>
+    </div>
+
+    <div class="dirbar">
+      <div class="seg" id="dirSeg">
+        <button data-dir="to_usb" class="on"><svg class="i"><use href="#i-nas"/></svg>NAS <svg class="i"><use href="#i-arrow"/></svg> USB</button>
+        <button data-dir="to_nas"><svg class="i"><use href="#i-drive"/></svg>USB <svg class="i"><use href="#i-arrow"/></svg> NAS</button>
+      </div>
+      <span class="hint" id="dirHint"></span>
+      <div class="spacer"></div>
+      <div class="drives hidden" id="driveList"></div>
+      <button class="btn" id="clearBtn" title="Clear this tab's folders and options">Clear</button>
+    </div>
+
+    <div class="panes">
+      <div class="pane" id="nasPane">
+        <div class="pane-h">
+          <svg class="i" style="color:var(--muted)"><use href="#i-nas"/></svg>
+          <span class="t">NAS shared folders</span>
+          <span class="role" id="nasRole"></span>
+          <div class="spacer"></div>
+          <button class="iconbtn hidden" id="nasMk" title="New folder in selected folder"><svg class="i"><use href="#i-plus"/></svg></button>
+          <button class="iconbtn" id="nasRefresh" title="Refresh"><svg class="i"><use href="#i-refresh"/></svg></button>
+        </div>
+        <div class="pane-sub" id="nasSub"></div>
+        <div class="tree" id="nasTree"></div>
+      </div>
+      <div class="arrowcol"><svg><use href="#i-arrow" id="midArrow"/></svg></div>
+      <div class="pane" id="usbPane">
+        <div class="pane-h">
+          <svg class="i" style="color:var(--muted)"><use href="#i-drive"/></svg>
+          <span class="t" id="usbTitle">External drive</span>
+          <span class="role" id="usbRole"></span>
+          <div class="spacer"></div>
+          <button class="iconbtn hidden" id="usbMk" title="New folder in selected folder"><svg class="i"><use href="#i-plus"/></svg></button>
+          <button class="iconbtn" id="usbRefresh" title="Rescan drives"><svg class="i"><use href="#i-refresh"/></svg></button>
+          <button class="iconbtn hidden" id="usbEject" title="Eject this drive"><svg class="i"><use href="#i-eject"/></svg></button>
+        </div>
+        <div class="pane-sub" id="usbSub"></div>
+        <div class="tree" id="usbTree"></div>
+      </div>
+    </div>
+
+    <div class="plan">
+      <div id="pairList" class="pairlist hidden"></div>
+      <div class="planrow">
+        <span class="planlbl" id="planLbl">Copy</span><div class="chips" id="srcChips"></div>
+        <span class="planarrow"><svg class="i"><use href="#i-arrow"/></svg></span>
+        <div class="chips" id="dstChip"></div>
+        <div class="spacer"></div>
+        <button type="button" class="btn sm" id="pairCancel" title="Stop editing this pair">Cancel</button>
+        <button type="button" class="btn sm" id="pairAdd" title="Keep this source → destination and pick another pair for the same job"><svg class="i"><use href="#i-plus"/></svg><span>Add pair</span></button>
+      </div>
+      <div class="modeline hidden" id="modeChoice">
+        <div class="seg sm">
+          <label><input type="radio" name="copymode" value="contents"><span id="mcContentsT">Folder to folder</span></label>
+          <label><input type="radio" name="copymode" value="into"><span id="mcIntoT">Inside as a subfolder</span></label>
+        </div>
+        <span class="hint" id="mcDesc"></span>
+      </div>
+      <div class="result-note" id="resultNote"></div>
+
+      <details class="optpanel more" id="optPanel">
+        <summary><span class="ol">Rules</span><span class="rsum" id="ruleSummary"></span><span class="edit">Edit</span></summary>
+        <div class="optbody">
+          <div class="og">
+            <div class="ogl">Compare by</div>
+            <div class="ogc">
+              <div class="seg wrap">
+                <label><input type="radio" name="cmp" value="quick" checked><span>Size + date</span></label>
+                <label><input type="radio" name="cmp" value="size"><span>Name + size</span></label>
+                <label><input type="radio" name="cmp" value="checksum"><span>Checksum</span></label>
+                <label><input type="radio" name="cmp" value="name"><span>Name only</span></label>
+                <label><input type="radio" name="cmp" value="always"><span>Always copy</span></label>
+              </div>
+              <div class="hint" id="cmpDesc"></div>
+            </div>
+          </div>
+          <div class="og">
+            <div class="ogl">Options</div>
+            <div class="ogc switches">
+              <label class="sw"><input type="checkbox" id="optSkip" checked><i></i><span>Skip Synology system folders</span></label>
+              <label class="sw"><input type="checkbox" id="optUpdate"><i></i><span>Don't overwrite newer files at the destination</span></label>
+              <label class="sw"><input type="checkbox" id="optExisting"><i></i><span>Only update files that already exist</span></label>
+              <label class="sw warnopt" id="optDeleteL"><input type="checkbox" id="optDelete" checked><i></i><span>Mirror: delete extra files at the destination</span></label>
+            </div>
+          </div>
+          <div class="og">
+            <div class="ogl">File size</div>
+            <div class="ogc fgroup">
+              <span>at least</span><input type="number" id="minSize" min="0" step="any" class="num" placeholder="any"><select id="minUnit"><option>K</option><option selected>M</option><option>G</option></select>
+              <span>at most</span><input type="number" id="maxSize" min="0" step="any" class="num" placeholder="any"><select id="maxUnit"><option>K</option><option selected>M</option><option>G</option></select>
+            </div>
+          </div>
+          <div class="og">
+            <div class="ogl">Modified</div>
+            <div class="ogc fgroup">
+              <select id="modMode"><option value="any">any time</option><option value="days">in the last…</option><option value="since">since…</option></select>
+              <span id="modDaysW"><input type="number" id="modDays" min="1" value="30" class="num"> days</span>
+              <input type="date" id="modSince">
+            </div>
+          </div>
+          <div class="og">
+            <div class="ogl">Time tolerance</div>
+            <div class="ogc fgroup">
+              <select id="mwMode"><option value="auto">Automatic</option><option value="custom">Custom</option></select>
+              <span id="mwW"><input type="number" id="mwSecs" min="0" max="86400" value="2" class="num"> seconds</span>
+              <span class="hint">Automatic = ±2 s on FAT/exFAT/NTFS, exact otherwise</span>
+            </div>
+          </div>
+          <div class="og">
+            <div class="ogl">Exclude</div>
+            <div class="ogc">
+              <textarea id="optExcludes" spellcheck="false" rows="2" placeholder="One pattern per line, e.g.  *.part   Thumbs.db   /photo/Private/"></textarea>
+            </div>
+          </div>
+          <div class="err" id="ruleErr"></div>
+        </div>
+      </details>
+    </div>
+    </div>
+    <div id="reportSlot"></div>
+  </section>
+
+  <!-- JOBS TAB -->
+  <section id="tab-jobs" class="hidden">
+    <div class="sectiontitle"><h2>Saved jobs</h2><span class="hint" id="nasTime"></span></div>
+    <div id="jobList"></div>
+  </section>
+
+  <!-- ACTIVITY TAB -->
+  <section id="tab-activity" class="hidden">
+    <div class="sectiontitle"><h2>Now</h2><div class="spacer"></div>
+      <button class="btn sm" id="newSyncAct"><svg class="i"><use href="#i-plus"/></svg>New sync</button></div>
+    <div id="activeBox"></div>
+    <div id="queueBox"></div>
+    <div class="sectiontitle" style="margin-top:22px"><h2>History</h2></div>
+    <div class="card tw" style="padding:4px 6px"><table>
+      <thead><tr><th>Result</th><th>Job</th><th>Started</th><th>Duration</th><th>Details</th><th></th></tr></thead>
+      <tbody id="histBody"></tbody>
+    </table></div>
+  </section>
+</main>
+
+<div class="actions" id="actionBar">
+  <div class="msg" id="actionMsg"></div>
+  <label class="sw notifyopt" title="Uses the channels in Settings › Notifications. Scheduled and plugged-in runs always notify."><input type="checkbox" id="optNotify"><i></i><span>Send notification upon completion</span></label>
+  <button class="btn" id="btnDry"><svg class="i"><use href="#i-eye"/></svg>Preview (dry run)</button>
+  <button class="btn" id="btnSave"><svg class="i"><use href="#i-save"/></svg><span>Save as job…</span></button>
+  <button class="btn primary" id="btnRun"><svg class="i"><use href="#i-play"/></svg>Sync now</button>
+</div>
+</div>
+
+<div id="report" class="report hidden">
+  <div class="rep-h">
+    <button class="iconbtn" id="repClose" title="Close"><svg class="i" style="width:20px;height:20px"><use href="#i-x"/></svg></button>
+    <div style="min-width:0"><div class="rep-title" id="repTitle"></div><div class="rep-sub" id="repSub"></div></div>
+    <div class="spacer"></div>
+    <button class="btn hidden" id="repPause"></button>
+    <button class="btn danger hidden" id="repCancel">Cancel</button>
+    <button class="btn hidden" id="repRerun"><svg class="i"><use href="#i-refresh"/></svg>Run again</button>
+    <button class="btn primary hidden" id="repRunReal"><svg class="i"><use href="#i-play"/></svg>Run this sync now</button>
+  </div>
+  <div class="rep-body">
+    <div id="repBanner" class="banner"></div>
+    <div id="repNotes"></div>
+    <div class="statgrid" id="repStats"></div>
+    <div class="critline" id="repCrit"></div>
+    <div id="repLive" class="hidden"></div>
+    <div id="repDone">
+    <div class="reptabs" id="repTabs">
+      <button data-rt="files" class="on">Files</button>
+      <button data-rt="errors">Errors <span id="repErrN" class="pill" style="padding:0 7px">0</span></button>
+      <button data-rt="log">Raw log</button>
+    </div>
+    <div id="rt-files">
+      <div class="ftools" id="repFilters"></div>
+      <div class="hint" id="repTrunc" style="margin-bottom:8px"></div>
+      <div class="ftable">
+        <div class="rrow head"><div>Name</div><div>Result</div><div class="why">Why</div><div class="sz">Size</div></div>
+        <div id="repTree"></div>
+      </div>
+    </div>
+    <div id="rt-errors" class="hidden"></div>
+    <div id="rt-log" class="hidden"><pre class="log" id="repLog" style="max-height:none;min-height:300px"></pre></div>
+    </div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+<div class="toast" id="toasts"></div>
+
+<script>
+"use strict";
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const icon = (id, cls = "") => `<svg class="i ${cls}"><use href="#i-${id}"/></svg>`;
+const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+function fmtBytes(n) {
+  if (!n) return "0 B";
+  const u = ["B","KB","MB","GB","TB","PB"]; let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return (n >= 100 || i === 0 ? n.toFixed(0) : n.toFixed(1)) + " " + u[i];
+}
+function fmtTime(t) {
+  if (!t) return "";
+  const d = new Date(t);
+  return d.toLocaleString([], {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+}
+function fmtDur(a, b) {
+  if (!a || !b) return "";
+  let s = Math.max(0, Math.round((new Date(b) - new Date(a)) / 1000));
+  const h = Math.floor(s / 3600); s -= h * 3600; const m = Math.floor(s / 60); s -= m * 60;
+  return h ? `${h}h ${m}m` : m ? `${m}m ${s}s` : `${s}s`;
+}
+function toast(msg, bad = false) {
+  const d = document.createElement("div"); if (bad) d.className = "bad"; d.textContent = msg;
+  $("#toasts").appendChild(d); setTimeout(() => d.remove(), bad ? 7000 : 3500);
+}
+
+async function api(method, path, body) {
+  const opt = {method, headers: {"X-USBSync": "1"}, credentials: "same-origin"};
+  if (body !== undefined) { opt.headers["Content-Type"] = "application/json"; opt.body = JSON.stringify(body); }
+  const r = await fetch(path, opt);
+  const ct = r.headers.get("content-type") || "";
+  const data = ct.includes("json") ? await r.json() : await r.text();
+  if (r.status === 401 && path !== "/api/login") { showLogin(); throw new Error("Signed out"); }
+  if (!r.ok) { const e = new Error((data && data.error) || `Error ${r.status}`); e.data = data; throw e; }
+  return data;
+}
+
+/* ---------------- state ---------------- */
+const S = {
+  me: null, dir: "to_usb", shares: [], drives: [], driveId: null,
+  src: new Set(), dst: null, skip: new Set(), // absolute paths; skip = unticked inside a ticked folder
+  pairs: [], pairEdit: -1,                     // folder pairs already added to this job; index being edited
+  nodes: {nas: new Map(), usb: new Map()}, // path -> {name,path,readable,children,open,loading,err,root}
+  editing: null, jobs: [], status: null, tab: "sync", permDismissed: false, watch: new Set(), copyMode: "into", modeTouched: false,
+};
+const srcSide = () => S.dir === "to_usb" ? "nas" : "usb";
+const dstSide = () => S.dir === "to_usb" ? "usb" : "nas";
+const OFFLINE_MOUNT = "/:offline-drive"; // stand-in path root for an unplugged drive
+const curDrive = () => S.drives.find(d => d.id === S.driveId) || (S.offline && S.offline.id === S.driveId ? S.offline : null);
+const driveOffline = () => !!(curDrive() && curDrive().offline);
+const sideOf = p => { const d = curDrive(); return d && (p === d.mount || p.startsWith(d.mount + "/")) ? "usb" : "nas"; };
+const relUSB = p => { const d = curDrive(); const r = p.slice(d.mount.length); return r || "/"; };
+const under = (p, root) => p === root || p.startsWith(root.replace(/\/$/, "") + "/");
+const prettyPath = p => {
+  const d = curDrive();
+  if (d && under(p, d.mount)) return d.name + (p.length > d.mount.length ? p.slice(d.mount.length) : "");
+  return p.replace(/^\/volume\d+\//, "");
+};
+
+/* ---------------- login ---------------- */
+function showLogin() {
+  $("#appView").classList.add("hidden"); $("#loginView").classList.remove("hidden");
+  setTimeout(() => $("#lu").focus(), 50);
+}
+$("#loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  $("#loginErr").textContent = ""; $("#loginBtn").disabled = true;
+  try {
+    await api("POST", "/api/login", {user: $("#lu").value, pass: $("#lp").value, otp: $("#lo").value});
+    $("#lp").value = ""; $("#lo").value = ""; $("#otpField").classList.add("hidden");
+    await boot();
+  } catch (err) {
+    if (err.data && err.data.otp) { $("#otpField").classList.remove("hidden"); $("#lo").focus(); }
+    $("#loginErr").textContent = err.message;
+  } finally { $("#loginBtn").disabled = false; }
+});
+$("#logoutBtn").onclick = async () => { try { await api("POST", "/api/logout", {}); } catch {} showLogin(); };
+
+/* ---------------- tabs ---------------- */
+function setTab(t) {
+  S.tab = t;
+  $$("nav button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  ["sync","jobs","activity"].forEach(x => $("#tab-" + x).classList.toggle("hidden", x !== t));
+  $("#actionBar").classList.toggle("hidden", t !== "sync" || !!S.view);
+  // a report still showing full-screen (from History) closes when you navigate
+  if (!$("#report").classList.contains("inline")) $("#report").classList.add("hidden");
+  if (t === "sync" && S.view && $("#report").classList.contains("hidden")) showTabPreview(S.view.runId, S.view.name);
+  if (t === "jobs") loadJobs();
+  if (t === "activity") pollStatus();
+}
+$$("nav button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
+$("#hdrRun").onclick = () => setTab("activity");
+
+/* ---------------- direction ---------------- */
+function setDir(d, keepSel = false) {
+  if (S.dir !== d && !keepSel) { S.src.clear(); S.skip.clear(); S.dst = null; }
+  S.dir = d;
+  $$("#dirSeg button").forEach(b => b.classList.toggle("on", b.dataset.dir === d));
+  const toUSB = d === "to_usb";
+  $("#dirHint").textContent = toUSB ? "Back up NAS folders to the external drive" : "Restore or import folders from the external drive to the NAS";
+  $("#nasRole").textContent = toUSB ? "Source" : "Destination";
+  $("#nasRole").className = "role " + (toUSB ? "src" : "dst");
+  $("#usbRole").textContent = toUSB ? "Destination" : "Source";
+  $("#usbRole").className = "role " + (toUSB ? "dst" : "src");
+  $("#nasSub").textContent = (toUSB ? "Tick the folders to copy." : "Pick the folder to copy into.") + " Tap a name to open it.";
+  $("#usbSub").textContent = (toUSB ? "Pick the folder on the drive to copy into." : "Tick the folders on the drive to copy.") + " Tap a name to open it.";
+  $(".arrowcol svg").style.transform = toUSB ? "" : "scaleX(-1)";
+  renderAll();
+}
+$$("#dirSeg button").forEach(b => b.onclick = () => {
+  if (b.dataset.dir === S.dir) return;
+  if (driveOffline()) { toast("Connect the drive to change the direction — it would clear the folders on that drive."); return; }
+  if ((S.src.size || S.dst || S.pairs.length) && !confirm(S.pairs.length ? "Switching direction removes all folder pairs from this job. Continue?" : "Switching direction clears your current selection. Continue?")) return;
+  S.pairs = []; S.pairEdit = -1;
+  setDir(b.dataset.dir);
+});
+
+/* ---------------- data loading ---------------- */
+async function loadShares() {
+  S.shares = await api("GET", "/api/shares");
+  const m = new Map();
+  for (const s of S.shares) {
+    const old = S.nodes.nas.get(s.path);
+    m.set(s.path, {name: s.name, path: s.path, readable: s.readable, writable: s.writable, volume: s.volume,
+      children: old ? old.children : null, open: old ? old.open : false, root: true});
+  }
+  // keep loaded descendants
+  for (const [k, v] of S.nodes.nas) if (!m.has(k) && S.shares.some(s => under(k, s.path))) m.set(k, v);
+  S.nodes.nas = m;
+  // re-fetch open folders so the tree stays fresh
+  for (const n of m.values()) if (n.open && n.children) await loadChildren("nas", n, true);
+}
+async function loadDrives() {
+  S.drives = await api("GET", "/api/drives");
+  if (S.offline && S.offline.id === S.driveId) {
+    const real = S.drives.find(d => d.id === S.offline.id);
+    if (!real) return;                                   // still unplugged: keep editing offline
+    const map = p => p && under(p, OFFLINE_MOUNT) ? real.mount + p.slice(OFFLINE_MOUNT.length) : p;
+    S.src = new Set([...S.src].map(map)); S.skip = new Set([...S.skip].map(map)); S.dst = map(S.dst);
+    S.offline = null; S.nodes.usb = new Map();            // it was plugged in: switch to the real drive
+  }
+  if (!S.drives.find(d => d.id === S.driveId)) {
+    const prev = S.driveId;
+    S.driveId = S.drives.length ? S.drives[0].id : null;
+    if (prev && prev !== S.driveId) { S.nodes.usb = new Map(); clearSide("usb"); }
+  }
+  const d = curDrive();
+  if (d && !S.nodes.usb.has(d.mount)) {
+    S.nodes.usb = new Map();
+    S.nodes.usb.set(d.mount, {name: d.name, path: d.mount, readable: d.readable, children: null, open: true, root: true, drive: true});
+    await loadChildren("usb", S.nodes.usb.get(d.mount), true);
+  }
+}
+function dropSkipsUnder(p, inclusive) { for (const k of [...S.skip]) if ((inclusive || k !== p) && under(k, p)) S.skip.delete(k); }
+function clearSide(side) {
+  if (srcSide() === side) { S.src.clear(); S.skip.clear(); }
+  if (dstSide() === side) S.dst = null;
+}
+async function loadChildren(side, node, quiet) {
+  node.loading = true; node.err = null; if (!quiet) renderTree(side);
+  try {
+    const r = await api("GET", "/api/ls?files=1&path=" + encodeURIComponent(node.path));
+    node.children = r.entries.map(e => e.path);
+    node.files = (r.files || []).map(f => f.path);
+    node.moreFiles = r.moreFiles || 0;
+    for (const f of r.files || []) S.nodes[side].set(f.path, {name: f.name, path: f.path, readable: true, file: true, size: f.size});
+    for (const e of r.entries) {
+      const old = S.nodes[side].get(e.path);
+      S.nodes[side].set(e.path, {name: e.name, path: e.path, readable: e.readable, children: old ? old.children : null, files: old ? old.files : null, moreFiles: old ? old.moreFiles : 0, open: old ? old.open : false});
+      if (old && old.open && old.children) await loadChildren(side, S.nodes[side].get(e.path), true);
+    }
+  } catch (err) { node.children = []; node.files = []; node.err = err.message; }
+  node.loading = false;
+  if (!quiet) renderTree(side);
+}
+
+/* ---------------- tree rendering ---------------- */
+// Source selection: S.src = ticked roots. Inside a ticked root everything is
+// included except S.skip (unticked items), which become exclusions.
+function srcRootOf(p) { for (const s of S.src) if (under(p, s)) return s; return null; }
+function skipAbove(p) { for (const k of S.skip) if (k !== p && under(p, k)) return k; return null; }
+function hasSkipBelow(p) { for (const k of S.skip) if (k !== p && under(k, p)) return true; return false; }
+function effectiveSkip() { return [...S.skip].filter(k => [...S.src].some(s => k !== s && under(k, s))); }
+function ancestorSelected(p) { // kept for older callers
+  for (const s of S.src) if (s !== p && under(p, s)) return true;
+  return false;
+}
+function srcState(p) {
+  if (S.src.has(p)) return {checked: true, root: true, partial: hasSkipBelow(p)};
+  const root = srcRootOf(p);
+  if (!root) return {checked: false};
+  if (S.skip.has(p)) return {checked: false, excluded: true};
+  if (skipAbove(p)) return {checked: false, disabled: true, why: "Its parent folder is unticked"};
+  return {checked: true, inherited: true, partial: hasSkipBelow(p)};
+}
+const lockTip = () => `“${(S.me && S.me.pkgUser) || "USBSync"}” user needs permission to this share/folder`;
+function rowHTML(side, n, depth) {
+  const isSrc = side === srcSide();
+  const locked = !n.readable;
+  let input, cls = ["row"], title = n.path;
+  if (n.file) cls.push("filerow");
+  if (locked) { cls.push("locked"); title = lockTip(); }
+  if (isSrc) {
+    const st = srcState(n.path);
+    let dis = locked || st.disabled;
+    if (n.file && !srcRootOf(n.path)) { dis = true; title = "Tick a folder to sync it; files inside it can then be unticked"; }
+    if (st.why) title = st.why;
+    if (st.root) cls.push("sel");
+    if (st.excluded) { cls.push("excl"); title = "Unticked — excluded from this sync"; }
+    input = `<input type="checkbox" ${st.checked ? "checked" : ""} ${dis ? "disabled" : ""} data-partial="${st.partial ? 1 : 0}" tabindex="-1">`;
+  } else {
+    const checked = S.dst === n.path;
+    if (checked) cls.push("dsel");
+    input = `<input type="radio" name="dst-${side}" ${checked ? "checked" : ""} ${locked ? "disabled" : ""} tabindex="-1">`;
+  }
+  const pad = 8 + depth * 18;
+  if (n.drive) { // drive root: a heading row, children start at depth 0 like NAS shares
+    const d = curDrive();
+    return `<div class="${cls.join(" ")} head" data-path="${esc(n.path)}" data-side="${side}" title="${esc(title)}">
+        <span class="pick" data-act="pick">${input}</span>${icon("drive", "drv")}<span class="nm">${esc(n.name)}</span>
+        <span class="meta">${d ? fmtBytes(d.free) + " free" : ""}</span></div>` + childRows(side, n, -1);
+  }
+  const caret = n.file || locked ? `<span class="caret-sp"></span>`
+    : `<button class="caret ${n.open ? "open" : ""}" data-act="toggle" tabindex="-1">${icon("chev")}</button>`;
+  const ic = n.file ? icon("file", "fil") : icon("folder", "fold");
+  const meta = locked ? `<span class="meta lock" title="${esc(lockTip())}">${icon("lock")}</span>` : n.file ? `<span class="meta">${fmtBytes(n.size)}</span>` : "";
+  return `<div class="${cls.join(" ")}" data-path="${esc(n.path)}" data-side="${side}" style="padding-left:${pad}px" title="${esc(title)}">
+    ${caret}<span class="pick" data-act="pick">${input}</span>${ic}<span class="nm">${esc(n.name)}</span>${meta}</div>`
+    + (n.open ? childRows(side, n, depth) : "");
+}
+function childRows(side, n, depth) {
+  const ind = `style="padding-left:${40 + (depth + 1) * 18}px"`;
+  const showFiles = side === srcSide();
+  if (n.loading && !n.children) return `<div class="empty-row" ${ind}>Loading…</div>`;
+  if (n.err) return `<div class="empty-row" ${ind}>${esc(n.err)}</div>`;
+  if (!n.children) return "";
+  const files = showFiles ? (n.files || []) : [];
+  if (!n.children.length && !files.length) return `<div class="empty-row" ${ind}>${showFiles ? "Empty folder" : "No sub-folders"}</div>`;
+  let h = "";
+  for (const c of n.children) { const cn = S.nodes[side].get(c); if (cn) h += rowHTML(side, cn, depth + 1); }
+  for (const f of files) { const fn = S.nodes[side].get(f); if (fn) h += rowHTML(side, fn, depth + 1); }
+  if (showFiles && n.moreFiles) h += `<div class="empty-row" ${ind}>…and ${n.moreFiles.toLocaleString()} more files (not listed)</div>`;
+  return h;
+}
+function renderTree(side) {
+  const el = side === "nas" ? $("#nasTree") : $("#usbTree");
+  const st = el.scrollTop;
+  if (side === "nas") {
+    if (!S.shares.length) { el.innerHTML = `<div class="empty">${icon("nas")}<div>No shared folders found.</div></div>`; return; }
+    const vols = [...new Set(S.shares.map(s => s.volume))];
+    let h = "";
+    for (const v of vols) {
+      h += `<div class="row head vol" title="${esc("/" + v)}">${icon("nas")}<span class="nm">${esc(v.replace("volume", "Volume "))}</span></div>`;
+      for (const s of S.shares.filter(x => x.volume === v)) h += rowHTML("nas", S.nodes.nas.get(s.path), 0);
+    }
+    el.innerHTML = h;
+  } else {
+    const d = curDrive();
+    if (d && d.offline) {
+      const onDrive = [...S.src, ...(S.dst ? [S.dst] : [])].filter(p => under(p, OFFLINE_MOUNT));
+      const unt = [...S.skip].filter(p => under(p, OFFLINE_MOUNT));
+      el.innerHTML = `<div class="row head" style="cursor:default">${icon("drive", "drv")}<span class="nm">${esc(d.name)}</span><span class="meta" style="color:var(--warn)">not connected</span></div>
+        <div class="offnote">${icon("lock")}<div><b>${esc(d.name)} isn't plugged in.</b> The folders on it stay as saved:
+        <ul>${onDrive.map(p => `<li><code>${esc(prettyPath(p))}</code>${S.src.has(p) ? " (source)" : " (destination)"}</li>`).join("")}${unt.map(p => `<li><code>${esc(prettyPath(p))}</code> (unticked)</li>`).join("")}</ul>
+        Everything else — NAS folders, rules, name, schedule, plug-in option — can be changed and saved. Connect the drive to change these folders or to run the job.</div></div>`;
+      return;
+    }
+    if (!d) { el.innerHTML = `<div class="empty">${icon("drive")}<div><b>No external drive detected</b></div><div class="hint" style="margin-top:4px">Plug in a USB drive, wait for DSM to mount it, then press refresh.</div></div>`; return; }
+    el.innerHTML = rowHTML("usb", S.nodes.usb.get(d.mount), 0);
+  }
+  $$("input[data-partial='1']", el).forEach(i => i.indeterminate = true);
+  el.scrollTop = st;
+}
+function renderDrives() {
+  const box = $("#driveList");
+  box.classList.toggle("hidden", S.drives.length === 0);
+  const off = S.offline && S.offline.id === S.driveId ? [S.offline] : [];
+  box.classList.toggle("hidden", S.drives.length === 0 && !off.length);
+  box.innerHTML = off.map(d => `<button class="drive on offline" data-id="${esc(d.id)}" title="${esc(d.name)} — not connected">${icon("drive", "drv")}<span class="dn">${esc(d.name)}</span><span class="dm">not connected</span><span class="bar"><i style="width:0"></i></span></button>`).join("") + S.drives.map(d => {
+    const used = d.total ? (d.total - d.free) / d.total : 0;
+    return `<button class="drive ${d.id === S.driveId ? "on" : ""}" data-id="${esc(d.id)}"
+        title="${esc(`${d.name} — ${d.bus} · ${d.fstype} · ${d.shareName} · ${fmtBytes(d.free)} free of ${fmtBytes(d.total)}`)}">
+      ${icon("drive", "drv")}<span class="dn">${esc(d.name)}</span>
+      <span class="dm">${fmtBytes(d.free)} free${d.writable ? "" : ' · <span style="color:var(--warn)">read-only</span>'}</span>
+      <span class="bar ${used > .9 ? "full" : ""}"><i style="width:${(used * 100).toFixed(1)}%"></i></span></button>`;
+  }).join("");
+  $$(".drive", box).forEach(el => el.onclick = async () => {
+    if (el.dataset.id === S.driveId) return;
+    if (driveOffline() && !confirm(`Switch this job to “${el.querySelector(".dn").textContent}”? Its folders on “${curDrive().name}” will be cleared.`)) return;
+    if (S.pairs.length && !driveOffline() && !confirm(`All pairs in this job use “${curDrive().name}”. Switching drives removes them. Continue?`)) return;
+    S.pairs = []; S.pairEdit = -1;
+    S.offline = null;
+    S.driveId = el.dataset.id; S.nodes.usb = new Map(); clearSide("usb");
+    await loadDrives(); renderAll();
+  });
+  $("#usbEject").classList.toggle("hidden", !curDrive() || driveOffline());
+  $("#usbRefresh").title = driveOffline() ? "Check whether the drive is plugged in now" : "Rescan drives";
+  const d = curDrive();
+  $("#usbTitle").textContent = d ? d.name : "External drive";
+}
+function renderSummary() {
+  const src = [...S.src];
+  $("#srcChips").innerHTML = src.length
+    ? src.map(p => {
+        const ex = [...S.skip].filter(k => k !== p && under(k, p));
+        const exTitle = ex.length ? "\nUnticked (excluded):\n" + ex.map(k => "  " + k.slice(p.length + 1)).join("\n") : "";
+        const fixed = under(p, OFFLINE_MOUNT);
+        return `<span class="chip" title="${esc((fixed ? "On the unplugged drive — connect it to change\n" : "") + p + exTitle)}"><span>${esc(prettyPath(p))}</span>${ex.length ? `<span class="exc">−${ex.length}</span>` : ""}${fixed ? "" : `<button data-rm="${esc(p)}" title="Remove">${icon("x")}</button>`}</span>`;
+      }).join("")
+    : `<span class="hint">${S.pairs.length && S.pairEdit < 0 ? "Optional: tick another source to add one more pair" : `Nothing selected — tick folders in the ${srcSide() === "nas" ? "NAS" : "drive"} pane.`}</span>`;
+  $$("#srcChips button").forEach(b => b.onclick = () => { S.src.delete(b.dataset.rm); dropSkipsUnder(b.dataset.rm, true); renderAll(); });
+  $("#dstChip").innerHTML = S.dst
+    ? `<span class="chip dst" title="${esc(S.dst)}">${esc(prettyPath(S.dst))}</span>`
+    : `<span class="hint">Choose a destination folder in the ${dstSide() === "nas" ? "NAS" : "drive"} pane.</span>`;
+  const baseName = p => p === (curDrive() || {}).mount ? (curDrive() || {}).name : p.split("/").pop();
+  let note = "";
+  const mc = $("#modeChoice");
+  if (src.length === 1 && S.dst) {
+    const a = baseName(src[0]), b = baseName(S.dst);
+    if (!S.modeTouched) S.copyMode = a.toLowerCase() === b.toLowerCase() ? "contents" : "into";
+    mc.classList.remove("hidden");
+    $("#mcContentsT").textContent = `${a} ⇄ ${b}`;
+    $("#mcIntoT").textContent = `Inside as ${b}/${a}`;
+    $("#mcDesc").textContent = S.copyMode === "contents"
+      ? "Compares both folders and copies what's different."
+      : `Creates ${b}/${a} and syncs into it.`;
+    $$("input[name=copymode]").forEach(r => r.checked = r.value === S.copyMode);
+  } else {
+    mc.classList.add("hidden");
+    S.copyMode = "into";
+  }
+  if (src.length && S.dst) {
+    const base = prettyPath(S.dst);
+    if (S.copyMode === "contents") note = `Result: the contents of ${prettyPath(src[0])} are synced directly into ${base}.`;
+    else {
+      const names = src.map(baseName);
+      note = "Result: " + names.slice(0, 4).map(n => `${base}/${n}`).join(", ") + (names.length > 4 ? ` and ${names.length - 4} more` : "") + ".";
+    }
+    const d = curDrive();
+    if (d && d.fstype && !/^(ext[234]|btrfs|xfs|f2fs)$/i.test(d.fstype)) note += ` The drive uses ${d.fstype}, so permissions and symlinks are not kept.`;
+  }
+  $("#resultNote").textContent = note;
+  const st = S.status || {};
+  const nRun = (st.running || []).length, lim = st.maxParallel || 3;
+  $("#actionMsg").textContent = !nRun ? "" : nRun >= lim
+    ? `${nRun} syncs running (the limit) — a new one starts when a slot frees up.`
+    : `${nRun} sync${nRun > 1 ? "s" : ""} running — a new one starts right away unless it uses the same folders.`;
+  const ready = allPairs().length && curDrive() && !(S.pairEdit >= 0 && !selectionPair());
+  $("#btnRun").disabled = $("#btnDry").disabled = $("#btnSave").disabled = !ready;
+  renderPairs();
+  if (driveOffline()) {
+    $("#btnRun").disabled = $("#btnDry").disabled = true;
+    $("#actionMsg").textContent = `“${curDrive().name}” isn't connected — save your changes now; plug it in to preview or run.`;
+  }
+  $("#btnSave span").textContent = S.editing ? "Update job" : "Save as job…";
+  $("#editBanner").classList.toggle("hidden", !S.editing);
+  if (S.editing) $("#editName").textContent = S.editing.name;
+  $("#nasMk").classList.toggle("hidden", !(dstSide() === "nas" && S.dst));
+  $("#usbMk").classList.toggle("hidden", !(dstSide() === "usb" && S.dst) || driveOffline());
+  const locked = S.shares.some(s => !s.readable) || S.drives.some(d => !d.writable);
+  $("#permBanner").classList.toggle("hidden", !locked || S.permDismissed);
+  updateRuleSummary();
+  renderDraftTabs();
+}
+function renderAll() { renderDrives(); renderTree("nas"); renderTree("usb"); renderSummary(); }
+
+/* tree interactions (delegated) */
+for (const id of ["#nasTree", "#usbTree"]) {
+  $(id).addEventListener("click", async e => {
+    const row = e.target.closest(".row"); if (!row || !row.dataset.path) return;
+    const side = row.dataset.side, p = row.dataset.path, n = S.nodes[side].get(p);
+    if (!n) return;
+    const pickHit = e.target.closest("[data-act=pick]") || n.file || n.drive; // files and the drive heading: tap = tick
+    if (!pickHit) {
+      if (!n.readable) return;
+      n.open = !n.open;
+      if (n.open && !n.children) await loadChildren(side, n); else renderTree(side);
+      return;
+    }
+    e.preventDefault();
+    if (!n.readable) return;
+    if (side === srcSide()) {
+      if (S.src.has(p)) {                       // untick a selected root
+        S.src.delete(p); dropSkipsUnder(p, true);
+      } else if (srcRootOf(p)) {                // inside a ticked folder: untick/retick as exclusion
+        if (S.skip.has(p)) S.skip.delete(p);
+        else if (skipAbove(p)) return;          // parent already unticked
+        else { dropSkipsUnder(p, false); S.skip.add(p); }
+      } else {
+        if (n.file) { toast("Tick a folder to sync. Files inside it can then be unticked to leave them out."); return; }
+        for (const s of [...S.src]) if (under(s, p)) { S.src.delete(s); dropSkipsUnder(s, true); }
+        S.src.add(p);
+      }
+    } else {
+      if (n.file) return;
+      S.dst = S.dst === p ? null : p;
+    }
+    S.modeTouched = false;
+    renderTree(side); renderSummary();
+  });
+}
+$("#usbEject").onclick = async () => {
+  const d = curDrive(); if (!d) return;
+  if (S.me && S.me.ejectSet) {
+    if (!await confirmModal(`Eject ${d.name}?`, "Uses the admin account saved in Settings › Auto-eject.", "Eject", false)) return;
+    toast("Ejecting…");
+    try {
+      const r = await api("POST", "/api/eject", {driveId: d.id});
+      toast(r.message, !!r.pending);
+      if (S.driveId === d.id) { S.nodes.usb = new Map(); clearSide("usb"); }
+      await loadDrives().catch(() => {}); renderAll();
+    } catch (e) { toast(e.message, true); }
+    return;
+  }
+  ejectModal(d);
+};
+function ejectModal(d) {
+  if (!d) return;
+  const bg = modal(`<form class="modal"><h3>Eject ${esc(d.name)}?</h3>
+    <div class="hint" style="margin-bottom:12px">DSM only lets administrators eject drives, so enter a DSM admin account. It's used once for this eject and not stored.</div>
+    <div class="field"><label>DSM username</label><input id="ejU" autocomplete="username" required value="${esc(S.me && S.me.signedIn ? S.me.user : "")}"></div>
+    <div class="field"><label>Password</label><input id="ejP" type="password" autocomplete="current-password" required></div>
+    <div class="field hidden" id="ejOtpF"><label>Two-factor code</label><input id="ejO" inputmode="numeric" autocomplete="one-time-code"></div>
+    <div class="err" id="ejErr"></div>
+    <div class="mbtns"><button type="button" class="btn" data-no>Cancel</button><button class="btn primary" id="ejGo">${icon("eject")}Eject</button></div></form>`);
+  setTimeout(() => ($("#ejU", bg).value ? $("#ejP", bg) : $("#ejU", bg)).focus(), 30);
+  $("[data-no]", bg).onclick = () => bg.remove();
+  $("form", bg).onsubmit = async e => {
+    e.preventDefault();
+    $("#ejErr", bg).textContent = ""; $("#ejGo", bg).disabled = true; $("#ejGo", bg).lastChild.textContent = "Ejecting…";
+    try {
+      const r = await api("POST", "/api/eject", {driveId: d.id, user: $("#ejU", bg).value, pass: $("#ejP", bg).value, otp: $("#ejO", bg).value});
+      bg.remove(); toast(r.message, !!r.pending);
+      if (S.driveId === d.id) { S.nodes.usb = new Map(); clearSide("usb"); }
+      await loadDrives().catch(() => {}); renderAll();
+    } catch (err) {
+      if (err.data && err.data.otp) { $("#ejOtpF", bg).classList.remove("hidden"); $("#ejO", bg).focus(); }
+      $("#ejErr", bg).textContent = err.message;
+      $("#ejGo", bg).disabled = false; $("#ejGo", bg).lastChild.textContent = "Eject";
+    }
+  };
+}
+$("#nasRefresh").onclick = async () => { await loadShares().catch(e => toast(e.message, true)); renderAll(); };
+$("#usbRefresh").onclick = async () => {
+  const d = curDrive(); if (d) S.nodes.usb.delete(d.mount);
+  await loadDrives().catch(e => toast(e.message, true)); renderAll();
+};
+async function newFolder(side) {
+  const parent = S.dst; if (!parent) return;
+  const name = await promptModal("New folder", `Create a folder inside <b>${esc(prettyPath(parent))}</b>`, "Folder name", "");
+  if (!name) return;
+  try {
+    const r = await api("POST", "/api/mkdir", {parent, name});
+    const pn = S.nodes[side].get(parent); pn.open = true;
+    await loadChildren(side, pn, true);
+    S.dst = r.path; renderAll();
+  } catch (e) { toast(e.message, true); }
+}
+$("#nasMk").onclick = () => newFolder("nas");
+$("#usbMk").onclick = () => newFolder("usb");
+$$("input[name=copymode]").forEach(r => r.addEventListener("change", () => { S.copyMode = r.value; S.modeTouched = true; renderSummary(); }));
+$("#permDismiss").onclick = () => {
+  S.permDismissed = true; renderSummary();
+  api("POST", "/api/settings", {permBannerDismissed: true}).catch(() => {});
+};
+/* ---------------- draft tabs ---------------- */
+S.drafts = [null]; S.cur = 0;   // null = the live state of the current tab
+function captureDraft() {
+  return {dir: S.dir, driveId: S.driveId, src: [...S.src], dst: S.dst, copyMode: S.copyMode, modeTouched: S.modeTouched,
+    options: readOptions(), editing: S.editing, moreOpen: $("details.more").open, view: S.view, skip: effectiveSkip(), offline: S.offline, pairs: S.pairs.map(p => ({...p})), pairEdit: S.pairEdit};
+}
+function draftLabel(d) {
+  // tab name = the folder being synced (the source of the first pair)
+  const base = p => { const dr = S.drives.find(x => x.mount === p); return dr ? dr.name : p.split("/").pop(); };
+  const pairs = d.pairs || [];
+  const first = pairs.length ? pairs[0].src : d.src;
+  if (!first.length) return "New sync";
+  const total = pairs.length + (d.src.length && d.dst && (d.pairEdit == null || d.pairEdit < 0) ? 1 : 0);
+  return base(first[0]) + (first.length > 1 ? ` +${first.length - 1}` : "") + (total > 1 ? ` (${total} pairs)` : "");
+}
+function draftTitle(d) {
+  if (!d.src.length) return "New sync";
+  return d.src.map(prettyPath).join(", ") + (d.dst ? " → " + prettyPath(d.dst) : "");
+}
+function renderDraftTabs() {
+  const box = $("#draftTabs"); if (!box) return;
+  const tabs = S.drafts.map((d, i) => i === S.cur ? captureDraft() : d);
+  box.innerHTML = tabs.map((d, i) => `<div class="dtab ${i === S.cur ? "on" : ""}" data-dt="${i}" title="${esc(draftTitle(d))}">
+      ${d.view ? `<span class="pv" title="Showing a preview">${icon("eye")}</span>` : ""}<span class="lbl2">${esc(draftLabel(d))}</span>${S.drafts.length > 1 ? `<button class="x" data-dx="${i}" title="Close tab">${icon("x")}</button>` : ""}</div>`).join("")
+    + `<button class="dtab add" id="dtAdd" title="Set up another sync in a new tab">${icon("plus")} New sync</button>`;
+  $$("[data-dt]", box).forEach(el => el.onclick = e => { if (!e.target.closest("[data-dx]")) switchDraft(+el.dataset.dt); });
+  $$("[data-dx]", box).forEach(el => el.onclick = () => closeDraft(+el.dataset.dx));
+  $("#dtAdd").onclick = () => newDraft();
+}
+async function applyDraft(d) {
+  setDir(d.dir, true);
+  S.offline = d.offline || null;
+  if (S.offline && d.driveId === S.offline.id) { S.driveId = d.driveId; S.nodes.usb = new Map(); await loadDrives().catch(() => {}); }
+  else if (d.driveId && d.driveId !== S.driveId && S.drives.some(x => x.id === d.driveId)) {
+    S.driveId = d.driveId; S.nodes.usb = new Map(); await loadDrives();
+  }
+  S.pairs = (d.pairs || []).map(p => ({...p})); S.pairEdit = d.pairEdit != null ? d.pairEdit : -1;
+  S.src = new Set(d.src); S.skip = new Set(d.skip || []); S.dst = d.dst; S.copyMode = d.copyMode; S.modeTouched = d.modeTouched; S.editing = d.editing;
+  writeOptions(d.options); $("details.more").open = !!d.moreOpen;
+  if (d.view) showTabPreview(d.view.runId, d.view.name); else showSetup();
+  for (const p of [...S.src, S.dst].filter(Boolean)) if (!(driveOffline() && sideOf(p) === "usb")) await revealPath(sideOf(p), p).catch(() => {});
+  renderAll();
+}
+async function switchDraft(i) {
+  if (i === S.cur) return;
+  S.drafts[S.cur] = captureDraft();
+  S.cur = i;
+  const d = S.drafts[i]; S.drafts[i] = null;
+  await applyDraft(d);
+}
+async function newDraft() {
+  S.drafts[S.cur] = captureDraft();
+  S.drafts.push(null); S.cur = S.drafts.length - 1;
+  const live = S.drives.length ? (S.drives.find(x => x.id === S.driveId) || S.drives[0]).id : null;
+  await applyDraft({dir: "to_usb", driveId: live, src: [], dst: null, copyMode: "into", modeTouched: false, options: {skipSystem: true, delete: true}, editing: null, moreOpen: false, view: null, offline: null, pairs: [], pairEdit: -1});
+  for (const side of ["nas", "usb"]) for (const n of S.nodes[side].values()) n.open = !!n.drive;
+  renderAll();
+  $("#tab-sync").scrollIntoView({block: "start"});
+}
+async function closeDraft(i) {
+  if (S.drafts.length < 2) return;
+  if (i === S.cur) {
+    S.drafts.splice(i, 1);
+    S.cur = Math.min(i, S.drafts.length - 1);
+    const d = S.drafts[S.cur]; S.drafts[S.cur] = null;
+    await applyDraft(d);
+  } else {
+    S.drafts.splice(i, 1);
+    if (i < S.cur) S.cur--;
+    renderDraftTabs();
+  }
+}
+
+function resetSync() {
+  S.src.clear(); S.skip.clear(); S.dst = null; S.editing = null; S.modeTouched = false; S.copyMode = "into";
+  S.pairs = []; S.pairEdit = -1;
+  if (S.offline) { S.offline = null; S.driveId = S.drives.length ? S.drives[0].id : null; S.nodes.usb = new Map(); loadDrives().then(renderAll).catch(() => {}); }
+  writeOptions({skipSystem: true, delete: true});
+  $("details.more").open = false;
+  // fold the trees back to their top level
+  for (const side of ["nas", "usb"]) for (const n of S.nodes[side].values()) n.open = !!n.drive;
+  renderAll();
+  $("#tab-sync").scrollIntoView({block: "start"});
+}
+$("#clearBtn").onclick = () => resetSync();
+$("#newSyncAct").onclick = () => { setTab("sync"); newDraft(); };
+
+/* ---------------- rules / criteria ---------------- */
+const CMP_LABEL = {quick: "Size + modified date", size: "Name + size", checksum: "Content (checksum)", name: "File name only", always: "Always copy"};
+function splitSize(v) { const m = /^([\d.]+)([KMG])$/.exec(v || ""); return m ? [m[1], m[2]] : ["", "M"]; }
+function readOptions() {
+  const sz = (n, u) => { const v = $(n).value.trim(); return v === "" ? "" : (+v) + $(u).value; };
+  const mode = $("#modMode").value;
+  return {
+    compare: ($("input[name=cmp]:checked") || {}).value || "quick",
+    update: $("#optUpdate").checked, existingOnly: $("#optExisting").checked,
+    skipSystem: $("#optSkip").checked, delete: $("#optDelete").checked && mode === "any",
+    minSize: sz("#minSize", "#minUnit"), maxSize: sz("#maxSize", "#maxUnit"),
+    modified: {mode, days: +$("#modDays").value || 0, since: $("#modSince").value},
+    modifyWindow: $("#mwMode").value === "custom" ? Math.max(0, +$("#mwSecs").value || 0) : null,
+    excludes: $("#optExcludes").value.split("\n").map(s => s.trim()).filter(Boolean),
+    notify: $("#optNotify").checked,
+  };
+}
+function writeOptions(o) {
+  o = o || {};
+  const cmp = o.compare || (o.checksum ? "checksum" : "quick");
+  $$("input[name=cmp]").forEach(r => r.checked = r.value === cmp);
+  $("#optUpdate").checked = !!o.update; $("#optExisting").checked = !!o.existingOnly;
+  $("#optSkip").checked = o.skipSystem !== false; $("#optDelete").checked = o.delete === undefined ? true : !!o.delete;
+  [[o.minSize, "#minSize", "#minUnit"], [o.maxSize, "#maxSize", "#maxUnit"]].forEach(([v, n, u]) => { const [a, b] = splitSize(v); $(n).value = a; $(u).value = b; });
+  const m = o.modified || {};
+  $("#modMode").value = m.mode && m.mode !== "" ? m.mode : "any";
+  $("#modDays").value = m.days || 30; $("#modSince").value = m.since || "";
+  $("#mwMode").value = o.modifyWindow == null ? "auto" : "custom"; $("#mwSecs").value = o.modifyWindow == null ? 2 : o.modifyWindow;
+  $("#optExcludes").value = (o.excludes || []).join("\n");
+  $("#optNotify").checked = !!o.notify;
+  if ((o.excludes || []).length || o.modifyWindow != null) $("details.more").open = true;
+  syncRuleUI();
+}
+const CMP_DESC = {
+  quick: "Copied when size or modified date differs. rsync's default, fast.",
+  size: "A file with the same name and size is treated as unchanged; dates are ignored. Good for NTFS/exFAT drives.",
+  checksum: "Reads every file on both sides and compares contents. Slowest, most thorough.",
+  name: "Copies only files missing at the destination; never overwrites.",
+  always: "Re-copies every file, changed or not.",
+};
+function updateRuleSummary() {
+  const o = readOptions();
+  $("#cmpDesc").textContent = CMP_DESC[o.compare] || "";
+  let t = critText(o);
+  const nSkip = effectiveSkip().length;
+  if (nSkip) t += ` · ${nSkip} unticked item${nSkip > 1 ? "s" : ""} left out`;
+  $("#ruleSummary").textContent = t;
+}
+function syncRuleUI() {
+  const mode = $("#modMode").value;
+  $("#modDaysW").classList.toggle("hidden", mode !== "days");
+  $("#modSince").classList.toggle("hidden", mode !== "since");
+  $("#mwW").classList.toggle("hidden", $("#mwMode").value !== "custom");
+  const dateF = mode !== "any";
+  $("#optDeleteL").classList.toggle("disabled", dateF);
+  $("#optDeleteL").title = dateF ? "Not available with a date filter" : "Files at the destination that no longer exist in the source are removed.";
+  const cmp = ($("input[name=cmp]:checked") || {}).value;
+  $("#optExisting").closest("label").classList.toggle("disabled", cmp === "name");
+  if (cmp === "name") $("#optExisting").checked = false;
+  $("#ruleErr").textContent = "";
+  updateRuleSummary();
+}
+["#modMode", "#mwMode"].forEach(id => $(id).addEventListener("change", syncRuleUI));
+$("#optPanel").addEventListener("input", updateRuleSummary);
+$("#optPanel").addEventListener("change", updateRuleSummary);
+$$("input[name=cmp]").forEach(r => r.addEventListener("change", syncRuleUI));
+function critText(o, fs) {
+  o = o || {};
+  const p = [CMP_LABEL[o.compare || (o.checksum ? "checksum" : "quick")]];
+  if (o.update) p.push("skip newer at destination");
+  if (o.existingOnly) p.push("existing files only");
+  if (o.minSize) p.push("≥ " + o.minSize + "B");
+  if (o.maxSize) p.push("≤ " + o.maxSize + "B");
+  const m = o.modified || {};
+  if (m.mode === "days") p.push(`modified in last ${m.days} days`);
+  if (m.mode === "since") p.push("modified since " + m.since);
+  if (o.modifyWindow != null) p.push(`±${o.modifyWindow}s`);
+  if (o.delete) p.push("mirror");
+  const ex = o.excludes || [];
+  if (ex.length) p.push("excluding " + (ex.length > 4 ? ex.slice(0, 4).join(", ") + ` +${ex.length - 4}` : ex.join(", ")));
+  return p.join(" · ");
+}
+
+/* ---------------- building jobs ---------------- */
+function jobPairsHTML(j) {
+  const ps = (j.pairs && j.pairs.length) ? j.pairs : [{sources: j.sources, dest: j.dest, copyMode: j.copyMode}];
+  const side = r => r.side === "usb" ? (r.path === "/" ? j.driveName : j.driveName + r.path) : r.path.replace(/^\/volume\d+\//, "");
+  return ps.map((p, i) => `<div class="route">${ps.length > 1 ? `<b>${i + 1}.</b> ` : ""}${esc(p.sources.map(side).join(", "))} &nbsp;→&nbsp; ${esc(side(p.dest))}${p.copyMode === "contents" ? " &nbsp;(folder to folder)" : ""}</div>`).join("");
+}
+
+/* ---------------- folder pairs ---------------- */
+function selectionPair() {
+  if (!S.src.size || !S.dst) return null;
+  return {src: [...S.src], skip: effectiveSkip(), dst: S.dst, copyMode: S.src.size === 1 ? S.copyMode : "into"};
+}
+function allPairs() {
+  const list = S.pairs.slice(), sel = selectionPair();
+  if (S.pairEdit >= 0) { if (sel) list[S.pairEdit] = sel; }
+  else if (sel) list.push(sel);
+  return list;
+}
+function clearSelection() { S.src.clear(); S.skip.clear(); S.dst = null; S.modeTouched = false; S.copyMode = "into"; }
+function pairText(p) {
+  const srcs = p.src.map(x => prettyPath(x)).join(", ");
+  const tgt = p.copyMode === "contents" ? prettyPath(p.dst) : (p.src.length === 1 ? `${prettyPath(p.dst)}/${p.src[0].split("/").pop()}` : prettyPath(p.dst));
+  return {srcs, dst: prettyPath(p.dst), tgt};
+}
+function renderPairs() {
+  const box = $("#pairList");
+  const show = S.pairs.length > 0;
+  box.classList.toggle("hidden", !show);
+  const sel = selectionPair();
+  if (show) {
+    box.innerHTML = `<div class="pairhead">Folder pairs in this job</div>` + S.pairs.map((p, i) => {
+      const t = pairText(p), editing = i === S.pairEdit;
+      return `<div class="pairrow ${editing ? "editing" : ""}">
+        <span class="pnum">${i + 1}</span>
+        <span class="ptxt" title="${esc(t.srcs + " → " + t.dst)}"><b>${esc(t.srcs)}</b> <span class="parrow">→</span> ${esc(t.dst)}
+          <span class="hint">${p.copyMode === "contents" ? "folder to folder" : "inside"}${p.skip && p.skip.length ? ` · ${p.skip.length} unticked` : ""}</span></span>
+        ${editing ? '<span class="pill running">Editing below</span>' : `<button type="button" class="linkbtn" data-pe="${i}">Edit</button><button type="button" class="linkbtn danger" data-pr="${i}">Remove</button>`}
+      </div>`;
+    }).join("");
+    $$("[data-pe]", box).forEach(b => b.onclick = () => editPair(+b.dataset.pe));
+    $$("[data-pr]", box).forEach(b => b.onclick = () => removePair(+b.dataset.pr));
+  }
+  const n = S.pairs.length;
+  $("#planLbl").textContent = S.pairEdit >= 0 ? `Pair ${S.pairEdit + 1}` : n ? `Pair ${n + 1}` : "Copy";
+  const add = $("#pairAdd");
+  add.disabled = !sel;
+  add.querySelector("span").textContent = S.pairEdit >= 0 ? "Done" : "Add pair";
+  add.title = S.pairEdit >= 0 ? "Keep these changes to the pair" : "Keep this source → destination and pick another pair for the same job";
+  $("#pairCancel").classList.toggle("hidden", S.pairEdit < 0);
+}
+function commitSelection() {
+  const sel = selectionPair(); if (!sel) return false;
+  if (S.pairEdit >= 0) S.pairs[S.pairEdit] = sel; else S.pairs.push(sel);
+  S.pairEdit = -1; clearSelection();
+  return true;
+}
+$("#pairAdd").onclick = () => {
+  const editing = S.pairEdit >= 0;
+  if (!commitSelection()) return;
+  for (const side of ["nas", "usb"]) for (const n of S.nodes[side].values()) n.open = !!n.drive;
+  renderAll();
+  toast(editing ? "Pair updated" : `Pair ${S.pairs.length} added — pick the next source and destination, or save the job`);
+};
+$("#pairCancel").onclick = () => { S.pairEdit = -1; clearSelection(); renderAll(); };
+async function editPair(i) {
+  const sel = selectionPair();
+  if (S.pairEdit < 0 && sel) { S.pairs.push(sel); toast(`Your current selection was added as pair ${S.pairs.length}`); }
+  else if (S.pairEdit >= 0 && sel) S.pairs[S.pairEdit] = sel;
+  const p = S.pairs[i];
+  clearSelection();
+  S.src = new Set(p.src); S.skip = new Set(p.skip || []); S.dst = p.dst; S.copyMode = p.copyMode; S.modeTouched = true; S.pairEdit = i;
+  for (const x of [...p.src, p.dst, ...(p.skip || [])]) if (!(driveOffline() && sideOf(x) === "usb")) await revealPath(sideOf(x), x).catch(() => {});
+  renderAll();
+  $("#tab-sync").scrollIntoView({block: "start"});
+}
+function removePair(i) {
+  S.pairs.splice(i, 1);
+  if (S.pairEdit === i) { S.pairEdit = -1; clearSelection(); }
+  else if (S.pairEdit > i) S.pairEdit--;
+  renderAll();
+}
+
+function currentJob() {
+  const d = curDrive();
+  const ref = p => sideOf(p) === "usb" ? {side: "usb", path: relUSB(p)} : {side: "nas", path: p};
+  const pairs = allPairs().map(p => ({sources: p.src.map(ref), dest: ref(p.dst), skip: (p.skip || []).map(ref), copyMode: p.copyMode}));
+  const p0 = pairs[0] || {sources: [], dest: {}, skip: [], copyMode: "into"};
+  const j = {
+    direction: S.dir, driveId: d.id, driveName: d.name, driveMount: d.offline ? (d.savedMount || "") : d.mount,
+    pairs, sources: p0.sources, dest: p0.dest, skip: p0.skip, copyMode: p0.copyMode,
+    options: readOptions(),
+    schedule: {mode: "none", time: "", weekday: 0},
+  };
+  if (S.editing) { j.id = S.editing.id; j.name = S.editing.name; j.schedule = S.editing.schedule; j.autoRun = S.editing.autoRun; }
+  return j;
+}
+async function runNow(dry) {
+  const j = currentJob();
+  if (!dry && j.options.delete) {
+    const dsts = [...new Set(allPairs().map(p => prettyPath(p.dst)))];
+    const ok = await confirmModal("Mirror with deletion?", `Files inside <b>${dsts.map(esc).join("</b>, <b>")}</b> (within the copied folders) that don't exist in the source will be <b>permanently deleted</b>. Run a preview first if you're unsure.`, "Sync and delete", true);
+    if (!ok) return;
+  }
+  try {
+    const r = await api("POST", "/api/run", {job: j, dryRun: dry});
+    S.watch.add(r.id);
+    if (dry) showTabPreview(r.id, r.jobName);
+    else { toast("Sync started"); setTab("activity"); }
+  } catch (e) { $("#ruleErr").textContent = e.message; toast(e.message, true); }
+}
+$("#btnRun").onclick = () => runNow(false);
+$("#btnDry").onclick = () => runNow(true);
+$("#btnSave").onclick = async () => {
+  const j = currentJob();
+  const res = await jobModal(j);
+  if (!res) return;
+  Object.assign(j, res);
+  try {
+    const saved = await api("POST", "/api/jobs", j);
+    toast(S.editing ? "Job updated" : "Job saved");
+    S.editing = null; await loadJobs(); renderSummary(); setTab("jobs");
+    return saved;
+  } catch (e) { toast(e.message, true); }
+};
+$("#cancelEdit").onclick = () => { S.editing = null; renderSummary(); };
+
+/* ---------------- jobs tab ---------------- */
+function schedText(s) {
+  if (!s || s.mode === "none") return "Manual";
+  return s.mode === "daily" ? `Daily at ${s.time}` : `${WEEKDAYS[s.weekday]}s at ${s.time}`;
+}
+function lastRunFor(id) {
+  const h = (S.status && S.status.history) || [];
+  return h.find(r => r.jobId === id && !r.dryRun);
+}
+async function loadJobs() {
+  try { S.jobs = await api("GET", "/api/jobs"); } catch { return; }
+  $("#jobCount").textContent = S.jobs.length;
+  if (S.me) $("#nasTime").textContent = "Schedules use NAS time";
+  const box = $("#jobList");
+  if (!S.jobs.length) {
+    box.innerHTML = `<div class="card empty">${icon("save")}<div><b>No saved jobs yet</b></div><div class="hint" style="margin-top:4px">Pick folders on the Sync tab and choose “Save as job…” to reuse them or run them on a schedule.</div></div>`;
+    return;
+  }
+  box.innerHTML = S.jobs.map(j => {
+    const lr = lastRunFor(j.id);
+    const srcs = j.sources.map(s => s.side === "usb" ? (s.path === "/" ? j.driveName : s.path.split("/").pop()) : s.path.replace(/^\/volume\d+\//, "")).join(", ");
+    const dst = j.dest.side === "usb" ? j.driveName + (j.dest.path === "/" ? "" : j.dest.path) : j.dest.path.replace(/^\/volume\d+\//, "");
+    return `<div class="card job">
+      <div style="min-width:0">
+        <h3>${esc(j.name)}</h3>
+        ${jobPairsHTML(j)}
+        <div class="route" style="margin-top:2px">${esc(critText(j.options))}</div>
+        <div class="tags">
+          <span class="pill">${j.direction === "to_usb" ? "NAS → USB" : "USB → NAS"}</span>
+          <span class="pill">${icon("clock")} ${esc(schedText(j.schedule))}</span>
+          ${j.autoRun ? `<span class="pill" title="Starts ${(S.me && S.me.autoRunDelay != null ? S.me.autoRunDelay : 60)} s after the drive is plugged in">${icon("drive")} Runs on plug-in${S.me && S.me.autoRunOff ? " (off in Settings)" : ""}</span>` : ""}
+          ${j.options.delete ? '<span class="pill warning">Mirror (deletes)</span>' : ""}
+          ${j.driveConnected ? `<span class="pill success">Drive connected</span>` : `<span class="pill failed">Drive “${esc(j.driveName)}” not connected</span>`}
+          ${lr ? `<span class="pill ${lr.state}">Last: ${esc(lr.state)} · ${esc(fmtTime(lr.start || lr.queued))}</span>` : ""}
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn sm" data-a="run" data-id="${j.id}" ${j.driveConnected ? "" : "disabled"}>${icon("play")}Run</button>
+        <button class="btn sm" data-a="dry" data-id="${j.id}" ${j.driveConnected ? "" : "disabled"}>${icon("eye")}Preview</button>
+        <button class="btn sm" data-a="edit" data-id="${j.id}">Edit</button>
+        <button class="btn sm danger" data-a="del" data-id="${j.id}">Delete</button>
+      </div></div>`;
+  }).join("");
+  $$("button[data-a]", box).forEach(b => b.onclick = () => jobAction(b.dataset.a, b.dataset.id));
+}
+async function jobAction(a, id) {
+  const j = S.jobs.find(x => x.id === id); if (!j) return;
+  if (a === "run" || a === "dry") {
+    if (a === "run" && j.options.delete) {
+      if (!await confirmModal("Mirror with deletion?", `Running <b>${esc(j.name)}</b> will delete files at the destination that are not in the source.`, "Run job", true)) return;
+    }
+    try {
+      const r = await api("POST", "/api/run", {jobId: id, dryRun: a === "dry"}); S.watch.add(r.id);
+      if (a === "dry") openLive(r.id, r.jobName); else { toast("Started " + j.name); setTab("activity"); }
+    }
+    catch (e) { toast(e.message, true); }
+  } else if (a === "del") {
+    if (!await confirmModal("Delete job?", `Delete the saved job <b>${esc(j.name)}</b>? Files are not touched.`, "Delete", true)) return;
+    try { await api("DELETE", "/api/jobs/" + id); loadJobs(); } catch (e) { toast(e.message, true); }
+  } else if (a === "edit") {
+    await editJob(j);
+  }
+}
+async function editJob(j) {
+  if (S.src.size || S.dst || S.pairs.length) await newDraft(); // keep what's in the current tab
+  setDir(j.direction);
+  await loadDrives();
+  let d = S.drives.find(x => x.id === j.driveId && !(x.id.startsWith("mnt:") && j.driveName && x.name !== j.driveName));
+  if (!d) {
+    // drive unplugged: edit everything except the folders on that drive
+    S.offline = {id: j.driveId, name: j.driveName || "Unplugged drive", mount: OFFLINE_MOUNT, savedMount: j.driveMount, offline: true,
+      readable: true, writable: true, free: 0, total: 0, bus: "USB", fstype: "", shareName: ""};
+    d = S.offline;
+    toast(`“${d.name}” isn't connected — you can change everything except the folders on that drive.`);
+  } else S.offline = null;
+  if (S.driveId !== d.id) { S.driveId = d.id; S.nodes.usb = new Map(); if (!d.offline) await loadDrives(); }
+  const abs = r => r.side === "usb" ? (r.path === "/" ? d.mount : d.mount + r.path) : r.path;
+  const jp = (j.pairs && j.pairs.length) ? j.pairs : [{sources: j.sources, skip: j.skip, dest: j.dest, copyMode: j.copyMode}];
+  S.pairs = jp.map(p => ({src: p.sources.map(abs), skip: (p.skip || []).map(abs), dst: abs(p.dest), copyMode: p.copyMode || "into"}));
+  clearSelection(); S.pairEdit = -1;
+  if (S.pairs.length === 1) { // single pair: open it for editing straight away, like before
+    const p = S.pairs[0]; S.pairEdit = 0;
+    S.src = new Set(p.src); S.skip = new Set(p.skip); S.dst = p.dst;
+  }
+  writeOptions(j.options);
+  S.copyMode = (S.pairEdit === 0 ? S.pairs[0].copyMode : "into"); S.modeTouched = S.pairEdit === 0;
+  S.editing = {id: j.id, name: j.name, schedule: j.schedule, autoRun: !!j.autoRun};
+  // expand ancestors of selected folders so they are visible
+  for (const p of [...S.src, S.dst, ...S.skip].filter(Boolean)) if (!(driveOffline() && sideOf(p) === "usb")) await revealPath(sideOf(p), p).catch(() => {});
+  setTab("sync"); renderAll();
+}
+async function revealPath(side, p) {
+  const roots = side === "nas" ? S.shares.map(s => s.path) : [curDrive().mount];
+  const root = roots.find(r => under(p, r)); if (!root) return;
+  let cur = root;
+  const parts = p.slice(root.length).split("/").filter(Boolean);
+  for (const part of parts) {
+    const n = S.nodes[side].get(cur); if (!n || !n.readable) return;
+    if (!n.children) await loadChildren(side, n, true);
+    n.open = true; cur = cur + "/" + part;
+  }
+}
+
+/* ---------------- activity ---------------- */
+let pollTimer = null;
+async function pollStatus() {
+  clearTimeout(pollTimer);
+  try {
+    S.status = await api("GET", "/api/status");
+    renderActivity();
+  } catch {}
+  const busy = S.status && ((S.status.running || []).length || (S.status.queue || []).length || (S.status.pending || []).length);
+  pollTimer = setTimeout(pollStatus, busy ? 1000 : 5000);
+}
+
+function fmtEta(sec) {
+  if (sec == null || sec < 0) return "";
+  if (sec < 60) return "less than a minute left";
+  const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+  return h ? `about ${h}h ${m}m left` : `about ${m} min left`;
+}
+function activeCard(a) {
+  const head = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3>${esc(a.jobName)}</h3>${a.dryRun ? '<span class="pill">Preview</span>' : ""}${a.paused ? '<span class="pill warning">Paused</span>' : `<span class="pill running">${a.phase === "scanning" ? "Scanning" : a.phase === "resuming" ? "Resuming" : "Running"}</span>`}
+      ${a.passes > 1 ? `<span class="pill">Part ${a.pass} of ${a.passes}</span>` : ""}
+      <div class="spacer"></div>
+      <button class="btn sm" data-pause="${a.id}" data-p="${a.paused ? 0 : 1}">${a.paused ? icon("play") + "Resume" : icon("pause") + "Pause"}</button>
+      <button class="btn sm danger" data-cancel="${a.id}">Cancel</button></div>
+    <div class="route hint" style="margin-top:4px">${esc((a.sources || []).join(", "))} → ${esc(a.dest || "")}</div>`;
+  if (a.phase === "scanning") {
+    return `<div class="card">${head}
+      <div class="prog indet"><i></i></div>
+      <div class="stats"><span>Working out what needs copying… checked <b>${a.scanned.toLocaleString()}</b> items</span>
+        ${a.toCopyFiles ? `<span><b>${a.toCopyFiles.toLocaleString()}</b> files · <b>${fmtBytes(a.toCopyBytes)}</b> to copy so far</span>` : ""}</div></div>`;
+  }
+  const known = a.toCopyBytes > 0;
+  const speed = a.paused ? "" : a.speed > 0 ? fmtBytes(a.speed) + "/s" : a.rate;
+  const files = known ? `<span>File <b>${Math.min(a.filesDone + (a.curSize && a.curDone < a.curSize ? 1 : 0), a.toCopyFiles).toLocaleString()}</b> of ${a.toCopyFiles.toLocaleString()}</span>` : "";
+  const curPct = a.curSize ? Math.round(a.curDone * 100 / a.curSize) : 0;
+  return `<div class="card">${head}
+    <div class="prog ${a.paused ? "paused" : ""}"><i style="width:${a.percent}%"></i></div>
+    <div class="stats"><span><b>${a.percent}%</b></span>
+      <span><b>${fmtBytes(a.bytes)}</b>${known ? ` of ${fmtBytes(a.toCopyBytes)}` : ""} ${a.dryRun ? "checked" : "copied"}</span>
+      ${files}${speed ? `<span><b>${esc(speed)}</b></span>` : ""}
+      ${a.paused ? '<span class="hint">Paused — press Resume to continue where it stopped</span>' : known ? `<span>${fmtEta(a.etaSecs)}</span>` : a.eta ? `<span>ETA <b>${esc(a.eta)}</b></span>` : ""}
+      ${!known && !a.dryRun ? '<span class="hint">(overall % is approximate in checksum mode)</span>' : ""}</div>
+    ${a.current ? `<div class="curfile"><div class="cur">${esc(a.current)}</div>
+      ${a.curSize > 1048576 ? `<div class="prog small"><i style="width:${curPct}%"></i></div><div class="hint">${fmtBytes(a.curDone)} of ${fmtBytes(a.curSize)} · ${curPct}%</div>` : ""}</div>` : ""}
+    <div class="livecounts">
+      <span class="c-new">● <b>${a.newFiles}</b> new</span><span class="c-update">● <b>${a.updated}</b> updated</span>
+      <span class="c-delete">● <b>${a.deleted}</b> deleted</span><span class="c-unchanged">● <b>${a.unchanged}</b> unchanged</span>
+      <span class="hint">${a.dryRun ? "(would be)" : ""}</span></div></div>`;
+}
+let lastRunning = new Set();
+function renderActivity() {
+  const st = S.status || {};
+  const running = st.running || (st.active ? [st.active] : []);
+  const hr = $("#hdrRun");
+  if (running.length === 1) {
+    const a = running[0];
+    hr.classList.remove("hidden"); hr.textContent = a.paused ? "Paused" : a.phase === "scanning" ? "Scanning…" : a.phase === "resuming" ? "Resuming…" : a.dryRun ? "Previewing…" : `Syncing ${a.percent}%`;
+  } else if (running.length > 1) { hr.classList.remove("hidden"); hr.textContent = `${running.length} syncs running`; }
+  else if ((st.pending || []).length) { const p = st.pending[0]; hr.classList.remove("hidden"); hr.textContent = `“${p.jobName}” starts in ${Math.max(0, Math.round((new Date(p.startAt) - Date.now()) / 1000))}s`; }
+  else hr.classList.add("hidden");
+  const now = new Set(running.map(a => a.id));
+  let changed = now.size !== lastRunning.size;
+  for (const id of lastRunning) {
+    if (now.has(id)) continue;
+    changed = true;
+    const fin = (st.history || []).find(h => h.id === id);
+    if (fin) {
+      // previews open their report; finished syncs only notify, so several
+      // parallel syncs don't keep covering what you're doing
+      const onScreen = (S.view && S.view.runId === fin.id) || LIVE.id === fin.id || (R.id === fin.id && !$("#report").classList.contains("hidden"));
+      if (onScreen) { S.watch.delete(fin.id); }
+      else if (fin.dryRun && S.watch.has(fin.id) && fin.start) { S.watch.delete(fin.id); openReport(fin.id); }
+      else { S.watch.delete(fin.id); toast(`${fin.jobName}: ${fin.message || fin.state} — see History for details`, fin.state === "failed"); }
+    }
+    if (S.tab === "jobs") loadJobs();
+  }
+  if (changed) renderSummary();
+  lastRunning = now;
+  if (S.tab !== "activity") return;
+  $("#activeBox").innerHTML = running.length ? running.map(activeCard).join("") : `<div class="card hint">Nothing is running.</div>`;
+  $$("[data-pause]").forEach(b => b.onclick = () => togglePause(b.dataset.pause, b.dataset.p === "1"));
+  $$("[data-cancel]").forEach(b => b.onclick = () => api("POST", "/api/cancel", {runId: b.dataset.cancel}).then(() => toast("Cancelling…")).catch(e => toast(e.message, true)));
+  const q = st.queue || [];
+  const pend = st.pending || [];
+  const pendHTML = pend.map(p => {
+    const secs = Math.max(0, Math.round((new Date(p.startAt) - Date.now()) / 1000));
+    return `<div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap"><span class="pill running">Starts in ${secs}s</span>
+      <span>${esc(p.jobName)}</span><span class="hint">${esc(p.driveName)} was plugged in</span><div class="spacer"></div>
+      <button class="btn sm danger" data-cp="${p.id}">Don't start</button></div>`;
+  }).join("");
+  $("#queueBox").innerHTML = (pend.length ? `<div class="card"><b>Starting automatically</b>${pendHTML}</div>` : "") + (q.length ? `<div class="card"><b>Queued</b>${q.map(r => `
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap"><span class="pill queued">Queued</span><span>${esc(r.jobName)}</span>
+      ${r.dryRun ? '<span class="pill">Preview</span>' : ""}<span class="hint">${esc(r.message || "")}</span><div class="spacer"></div>
+      <button class="linkbtn" data-cq="${r.id}">Remove</button></div>`).join("")}</div>` : "");
+  $$("[data-cp]").forEach(b => b.onclick = () => api("POST", "/api/autorun/cancel", {id: b.dataset.cp}).then(() => { toast("Won't start"); pollStatus(); }).catch(e => toast(e.message, true)));
+  $$("[data-cq]").forEach(b => b.onclick = () => api("POST", "/api/cancel", {runId: b.dataset.cq}).then(pollStatus));
+  const h = st.history || [];
+  $("#histBody").innerHTML = h.length ? h.map(r => `<tr>
+      <td><span class="pill ${r.state}">${esc(r.state)}</span></td>
+      <td>${esc(r.jobName)}${r.dryRun ? ' <span class="pill">Preview</span>' : ""}${r.trigger === "schedule" ? ' <span class="pill">Scheduled</span>' : ""}${r.trigger === "rerun" ? ' <span class="pill">Re-run</span>' : ""}${r.trigger === "drive" ? ' <span class="pill">Plug-in</span>' : ""}</td>
+      <td style="white-space:nowrap">${esc(fmtTime(r.start || r.queued))}</td>
+      <td style="white-space:nowrap">${esc(fmtDur(r.start, r.end))}</td>
+      <td class="msgc">${esc(r.message)}${r.bytesTransferred ? ` <span style="white-space:nowrap">(${fmtBytes(r.bytesTransferred)})</span>` : ""}</td>
+      <td style="white-space:nowrap">${r.start ? `<button class="linkbtn" data-log="${r.id}">${r.dryRun ? "View preview" : "Details"}</button>` : ""}
+        ${r.hasSpec ? (r.dryRun
+          ? `<button class="linkbtn" data-rerun="${r.id}" data-dry="1">Preview again</button><button class="linkbtn" data-rerun="${r.id}">Run for real</button>`
+          : `<button class="linkbtn" data-rerun="${r.id}">Run again</button>`) : ""}</td></tr>`).join("")
+    : `<tr><td colspan="6" class="hint" style="padding:16px">No runs yet.</td></tr>`;
+  $$("[data-log]").forEach(b => b.onclick = () => openReport(b.dataset.log));
+  $$("[data-rerun]").forEach(b => b.onclick = () => rerun(b.dataset.rerun, !!b.dataset.dry));
+}
+async function showLog(id) {
+  let txt;
+  try { txt = await api("GET", "/api/logs/" + id); } catch (e) { toast(e.message, true); return; }
+  const bg = modal(`<div class="modal wide"><h3>Run log</h3><pre class="log"></pre>
+    <div class="mbtns"><button class="btn" data-close>Close</button></div></div>`);
+  $("pre", bg).textContent = txt;
+  $("[data-close]", bg).onclick = () => bg.remove();
+}
+
+
+/* ---------------- pause / resume ---------------- */
+async function togglePause(id, pause) {
+  try { await api("POST", "/api/pause", {runId: id, pause}); toast(pause ? "Paused" : "Resumed"); pollStatus(); if (LIVE.id === id) pollLive(); }
+  catch (e) { toast(e.message, true); }
+}
+
+/* ---------------- re-run ---------------- */
+async function rerun(id, dry) {
+  let run;
+  try { run = await api("GET", "/api/runs/" + id); } catch (e) { toast(e.message, true); return; }
+  if (!dry && run.spec && run.spec.options && run.spec.options.delete &&
+      !await confirmModal("Run again with Mirror?", `<b>${esc(run.jobName)}</b> deletes files at the destination that aren't in the source.`, "Run again", true)) return false;
+  try {
+    const r = await api("POST", `/api/runs/${id}/rerun`, {dryRun: dry});
+    S.watch.add(r.id);
+    if (dry) { openLive(r.id, run.jobName); return true; }
+    toast(`“${run.jobName}” started again`);
+    $("#report").classList.add("hidden");
+    setTab("activity");
+    return true;
+  } catch (e) { toast(e.message, true); return false; }
+}
+
+
+
+/* ---------------- previews inside their tab ---------------- */
+// S.view = {runId} when the current tab shows a preview instead of its setup.
+S.view = null;
+function placeReport(inline) {
+  const rep = $("#report");
+  if (inline) { $("#reportSlot").appendChild(rep); rep.classList.add("inline"); }
+  else { document.body.appendChild(rep); rep.classList.remove("inline"); }
+  $("#repClose").title = inline ? "Back to setup" : "Close";
+}
+function showSetup() {
+  S.view = null; stopLive();
+  $("#report").classList.add("hidden");
+  $("#setupArea").classList.remove("hidden");
+  $("#actionBar").classList.toggle("hidden", S.tab !== "sync");
+  renderDraftTabs();
+}
+async function showTabPreview(runId, name) {
+  S.view = {runId, name};
+  placeReport(true);
+  $("#setupArea").classList.add("hidden");
+  $("#actionBar").classList.add("hidden");
+  renderDraftTabs();
+  let st = null;
+  try { st = await api("GET", "/api/status"); } catch {}
+  const done = st && (st.history || []).some(h => h.id === runId);
+  if (S.view && S.view.runId === runId) done ? openReport(runId, true) : openLive(runId, name, true);
+}
+
+function exclHTML(list) {
+  list = list || [];
+  return `<b>Excluded:</b> ${list.length ? `<span class="exchips">${list.map(e => `<code>${esc(e)}</code>`).join("")}</span>` : '<span class="hint">nothing</span>'}`;
+}
+
+/* ---------------- live preview ---------------- */
+const LIVE = {id: null, timer: null, started: 0};
+function stopLive() { clearTimeout(LIVE.timer); LIVE.id = null; }
+function openLive(id, name, inline = false) {
+  placeReport(inline);
+  stopLive();
+  LIVE.id = id; LIVE.started = Date.now();
+  S.watch.delete(id); // this view opens the report itself
+  $("#repTitle").innerHTML = `${esc(name || "Preview")} <span class="pill">Preview</span><span class="pill running">Calculating…</span>`;
+  $("#repSub").textContent = "Working out what a sync would do — nothing is changed.";
+  $("#repNotes").innerHTML = ""; $("#repCrit").innerHTML = "";
+  $("#repStats").innerHTML = ""; $("#repBanner").className = "banner info";
+  $("#repBanner").innerHTML = `${icon("eye")}<div>Starting…</div>`;
+  $("#repDone").classList.add("hidden"); $("#repLive").classList.remove("hidden");
+  $("#repLive").innerHTML = "";
+  $("#repRunReal").classList.add("hidden"); $("#repRerun").classList.add("hidden");
+  $("#repCancel").classList.remove("hidden");
+  $("#repCancel").onclick = () => api("POST", "/api/cancel", {runId: id}).then(() => toast("Cancelling…")).catch(e => toast(e.message, true));
+  $("#report").classList.remove("hidden");
+  pollLive();
+}
+async function pollLive() {
+  const id = LIVE.id; if (!id) return;
+  let st;
+  try { st = await api("GET", "/api/status"); } catch { LIVE.timer = setTimeout(pollLive, 1500); return; }
+  if (LIVE.id !== id) return;
+  S.status = st; renderActivity();
+  const done = (st.history || []).find(h => h.id === id);
+  if (done) {
+    S.watch.delete(id);
+    if (!$("#report").classList.contains("hidden")) openReport(id, $("#report").classList.contains("inline"));
+    stopLive(); return;
+  }
+  const a = (st.running || []).find(x => x.id === id) || null;
+  const started = a0 => a0 && a0.start ? new Date(a0.start).getTime() : LIVE.started;
+  const secs = Math.max(0, Math.round((Date.now() - started((st.running || []).find(x => x.id === id))) / 1000));
+  const el = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
+  if (!a) {
+    const q = (st.queue || []).find(x => x.id === id);
+    $("#repBanner").innerHTML = `${icon("clock")}<div>${q && q.message ? esc(q.message) : "Starting…"}</div>`;
+  } else {
+    const pb = $("#repPause"); pb.classList.remove("hidden");
+    pb.innerHTML = a.paused ? icon("play") + "Resume" : icon("pause") + "Pause";
+    pb.onclick = () => togglePause(id, !a.paused);
+    if (a.paused) $("#repBanner").innerHTML = `${icon("pause")}<div><b>Paused</b> after checking ${a.scanned.toLocaleString()} items. Press Resume to continue.</div>`;
+    else $("#repBanner").innerHTML = `${icon("eye")}<div><b>Calculating…</b> checked <b>${a.scanned.toLocaleString()}</b> items · ${el} elapsed. Nothing is being changed.</div>`;
+    const xfer = (a.newBytes || 0) + (a.updBytes || 0);
+    const card = (cls, label, v, sub) => `<div class="stat"><div class="k">${cls ? `<span class="dot bg-${cls}"></span>` : ""}${label}</div><div class="v">${v.toLocaleString()}</div><div class="s">${sub}</div></div>`;
+    $("#repStats").innerHTML = card("new", "New files to copy", a.newFiles, fmtBytes(a.newBytes)) +
+      card("update", "Files to update", a.updated, fmtBytes(a.updBytes)) +
+      card("delete", "Files to delete", a.deleted, a.deleted ? fmtBytes(a.delBytes || 0) : "&nbsp;") +
+      card("unchanged", "Skipped (unchanged)", a.unchanged, "not copied") +
+      `<div class="stat"><div class="k">Data to transfer</div><div class="v">${fmtBytes(xfer)}</div><div class="s">so far</div></div>`;
+    $("#repCrit").innerHTML = a.criteria ? `<b>Rules:</b> ${esc(a.criteria)}<br>${exclHTML(a.excluded)}` : "";
+    const L = STATUS_LABEL.dry;
+    const rec = (a.recent || []).slice().reverse();
+    $("#repLive").innerHTML = `<div class="checking">${a.current ? "Checking: " + esc(a.current) : ""}</div>
+      <div class="feed"><div class="fh">Changes found so far (latest first)</div>
+      ${rec.length ? rec.map(r => `<div class="fi"><span class="st ${r.s}">${esc(L[r.s] || r.s)}</span><span class="p" title="${esc(r.p)}">&lrm;${esc(r.p)}</span><span class="sz" style="text-align:right;color:var(--muted)">${r.s === "delete" && !r.z ? "" : fmtBytes(r.z)}</span></div>`).join("")
+        : `<div class="fi" style="grid-template-columns:1fr;color:var(--faint)">No changes found yet.</div>`}</div>`;
+  }
+  LIVE.timer = setTimeout(pollLive, 800);
+}
+
+/* ---------------- run report ---------------- */
+const R = {id: null, run: null, filter: "changes", open: new Set(), cache: new Map(), q: "", qTimer: null};
+const STATUS_LABEL = {
+  dry: {new: "Will copy", update: "Will update", delete: "Will delete", unchanged: "Skip"},
+  real: {new: "Copied", update: "Updated", delete: "Deleted", unchanged: "Unchanged"},
+};
+function whyText(f, cmp) {
+  const rs = f.reasons || [];
+  if (f.status === "new") return f.isDir ? "new folder" : "not at destination";
+  if (f.status === "delete") return "not in source";
+  if (f.status === "update") {
+    const m = {content: "content differs", size: "size differs", date: "date differs", forced: "always-copy rule"};
+    return rs.map(r => m[r] || r).join(", ");
+  }
+  const same = {quick: "same size & date", size: "same size", checksum: "identical content", name: "exists at destination", always: "same"}[cmp] || "unchanged";
+  if (rs.includes("date")) return same + " (date synced)";
+  if (rs.includes("perms")) return same + " (permissions synced)";
+  return same;
+}
+async function openReport(id, inline = $("#report").classList.contains("inline") && !!S.view && S.view.runId === id) {
+  placeReport(inline);
+  let run;
+  try { run = await api("GET", "/api/runs/" + id); } catch (e) { toast(e.message, true); return; }
+  stopLive();
+  $("#repLive").classList.add("hidden"); $("#repDone").classList.remove("hidden"); $("#repCancel").classList.add("hidden"); $("#repPause").classList.add("hidden");
+  Object.assign(R, {id, run, filter: "changes", open: new Set(), cache: new Map(), q: ""});
+  const dry = run.dryRun;
+  $("#repTitle").innerHTML = `${esc(run.jobName)} <span class="pill ${run.state}">${esc(run.state)}</span>${dry ? '<span class="pill">Preview</span>' : ""}`;
+  $("#repSub").textContent = `${fmtTime(run.start)} · ${fmtDur(run.start, run.end)}` + (run.trigger === "schedule" ? " · scheduled" : "");
+  const ban = $("#repBanner");
+  // only problems get a banner; the counts below already say what happened
+  if (run.state === "success") { ban.className = "banner hidden"; ban.innerHTML = ""; }
+  else { ban.className = "banner warn"; ban.innerHTML = `${icon("info")}<div>${esc(run.message)}</div>`; }
+  const xfer = (run.newBytes || 0) + (run.updBytes || 0);
+  const secs = run.start && run.end ? (new Date(run.end) - new Date(run.start)) / 1000 : 0;
+  const L = dry ? STATUS_LABEL.dry : STATUS_LABEL.real;
+  const card = (f, cls, label, v, sub) => `<div class="stat ${R.filter === f ? "on" : ""}" data-sf="${f}"><div class="k"><span class="dot bg-${cls}"></span>${label}</div><div class="v">${v.toLocaleString()}</div><div class="s">${sub}</div></div>`;
+  // notes (e.g. drive can't keep dates) stay in the raw log; warnings that change the outcome are shown
+  $("#repNotes").innerHTML = (run.warn || []).map(w => `<div class="banner warn">${icon("info")}<div>${esc(w)}</div></div>`).join("");
+  $("#repStats").innerHTML =
+    card("new", "new", dry ? "New files to copy" : "New files copied", run.newFiles, fmtBytes(run.newBytes)) +
+    card("update", "update", dry ? "Files to update" : "Files updated", run.updated, fmtBytes(run.updBytes)) +
+    card("delete", "delete", dry ? "Files to delete" : "Files deleted", run.deleted, run.deleted ? (dry ? fmtBytes(run.delBytes || 0) : "mirror") : "—") +
+    card("unchanged", "unchanged", dry ? "Skipped (unchanged)" : "Unchanged", run.unchanged, "not copied") +
+    `<div class="stat" data-sf="changes"><div class="k">${dry ? "Data to transfer" : "Data transferred"}</div><div class="v">${fmtBytes(dry ? xfer : (run.bytesTransferred || xfer))}</div>
+      <div class="s">${!dry && secs > 1 ? fmtBytes((run.bytesTransferred || xfer) / secs) + "/s average" : run.newDirs ? run.newDirs + " new folder(s)" : "&nbsp;"}</div></div>`;
+  $$("#repStats .stat").forEach(c => c.onclick = () => setRepFilter(c.dataset.sf));
+  $("#repCrit").innerHTML = `<b>Rules:</b> ${esc(run.criteria || "—")}<br>${exclHTML(run.excluded)}<br>${(run.pairs && run.pairs.length > 1)
+    ? run.pairs.map((p, i) => `<b>Pair ${i + 1}:</b> ${esc(p.sources.join(", "))} → ${esc(p.dest)}`).join("<br>")
+    : `<b>From:</b> ${esc((run.sources || []).join(", "))}<br><b>To:</b> ${esc(run.dest || "")}`}`;
+  $("#repErrN").textContent = run.errorCount || 0;
+  $("#rt-errors").innerHTML = (run.errors || []).length
+    ? `<div class="errlist">${run.errors.map(e => `<div>${esc(e)}</div>`).join("")}</div>${run.errorCount > run.errors.length ? `<div class="hint" style="margin-top:8px">${run.errorCount - run.errors.length} more in the raw log.</div>` : ""}`
+    : `<div class="card hint">No errors reported.</div>`;
+  $("#repTrunc").textContent = run.truncated ? "This run touched a very large number of files, so the list below is partial; the counts above are complete." : "";
+  $("#repRunReal").classList.toggle("hidden", !(dry && run.spec && run.state !== "failed"));
+  $("#repRerun").classList.toggle("hidden", !(!dry && run.spec));
+  $("#repRerun").onclick = () => rerun(id, false);
+  setRepTab("files");
+  $("#repLog").textContent = "Loading…";
+  api("GET", "/api/logs/" + id).then(t => $("#repLog").textContent = t).catch(() => $("#repLog").textContent = "No log.");
+  renderRepFilters();
+  $("#report").classList.remove("hidden");
+  await loadRepDir("");
+  // open small top levels automatically
+  const top = R.cache.get("");
+  if (top && top.dirs.length <= 3) for (const d of top.dirs) { R.open.add(d.path); await loadRepDir(d.path); }
+  renderRepTree();
+}
+function setRepTab(t) {
+  $$("#repTabs button").forEach(b => b.classList.toggle("on", b.dataset.rt === t));
+  ["files", "errors", "log"].forEach(x => $("#rt-" + x).classList.toggle("hidden", x !== t));
+}
+$$("#repTabs button").forEach(b => b.onclick = () => setRepTab(b.dataset.rt));
+$("#repClose").onclick = () => {
+  if ($("#report").classList.contains("inline")) { showSetup(); return; } // back to this tab's setup
+  $("#report").classList.add("hidden");
+  if (LIVE.id) { S.watch.delete(LIVE.id); stopLive(); }
+  if (S.view && S.tab === "sync") showTabPreview(S.view.runId, S.view.name); // restore this tab's preview
+};
+$("#repRunReal").onclick = async () => {
+  const spec = R.run.spec;
+  if (spec.options && spec.options.delete && !await confirmModal("Mirror with deletion?", `${R.run.deleted} file(s) will be <b>permanently deleted</b> at the destination.`, "Run sync", true)) return;
+  try {
+    const r = await api("POST", "/api/run", {job: spec, dryRun: false});
+    S.watch.add(r.id);
+    if ($("#report").classList.contains("inline")) showSetup(); else $("#report").classList.add("hidden");
+    toast("Sync started"); setTab("activity");
+  } catch (e) { toast(e.message, true); }
+};
+function renderRepFilters() {
+  const run = R.run, L = run.dryRun ? STATUS_LABEL.dry : STATUS_LABEL.real;
+  const chips = [["changes", "All changes", run.newFiles + run.updated + run.deleted, ""], ["new", L.new, run.newFiles, "new"],
+    ["update", L.update, run.updated, "update"], ["delete", L.delete, run.deleted, "delete"],
+    ["unchanged", run.dryRun ? "Skipped" : "Unchanged", run.unchanged, "unchanged"], ["all", "Everything", run.newFiles + run.updated + run.deleted + run.unchanged, ""]];
+  $("#repFilters").innerHTML = chips.map(([f, l, n, c]) => `<button class="fchip ${R.filter === f ? "on" : ""}" data-f="${f}">${c ? `<span class="dot bg-${c}"></span>` : ""}${esc(l)} <span style="opacity:.7">${n.toLocaleString()}</span></button>`).join("")
+    + `<input class="search" id="repSearch" placeholder="Search file names…" value="${esc(R.q)}">`;
+  $$("#repFilters .fchip").forEach(b => b.onclick = () => setRepFilter(b.dataset.f));
+  $("#repSearch").oninput = e => { clearTimeout(R.qTimer); R.qTimer = setTimeout(() => { R.q = e.target.value.trim(); reloadRep(); }, 300); };
+  $$("#repStats .stat").forEach(c => c.classList.toggle("on", c.dataset.sf === R.filter && c.dataset.sf !== "changes"));
+}
+function setRepFilter(f) { R.filter = f; renderRepFilters(); reloadRep(); }
+async function reloadRep() {
+  R.cache = new Map();
+  await loadRepDir("");
+  for (const d of R.open) await loadRepDir(d);
+  renderRepTree();
+}
+async function loadRepDir(dir) {
+  const qs = new URLSearchParams({filter: R.filter, dir});
+  if (R.q) qs.set("q", R.q);
+  try { R.cache.set(dir, await api("GET", `/api/runs/${R.id}/tree?` + qs)); }
+  catch (e) { R.cache.set(dir, {dirs: [], files: [], more: 0, error: e.message}); }
+}
+function badgeHTML(c) {
+  const b = [];
+  if (c.new) b.push(`<span class="c-new">+${c.new.toLocaleString()}</span>`);
+  if (c.update) b.push(`<span class="c-update">~${c.update.toLocaleString()}</span>`);
+  if (c.delete) b.push(`<span class="c-delete">−${c.delete.toLocaleString()}</span>`);
+  if (c.unchanged && (R.filter === "all" || R.filter === "unchanged")) b.push(`<span class="c-unchanged">=${c.unchanged.toLocaleString()}</span>`);
+  return `<div class="badges">${b.join("")}</div>`;
+}
+function repRows(dir, depth) {
+  const data = R.cache.get(dir); if (!data) return "";
+  const L = R.run.dryRun ? STATUS_LABEL.dry : STATUS_LABEL.real;
+  const cmp = (R.run.spec && R.run.spec.options && R.run.spec.options.compare) || "quick";
+  const pad = 14 + depth * 20;
+  let h = "";
+  if (data.error) return `<div class="more-row" style="padding-left:${pad}px">${esc(data.error)}</div>`;
+  for (const d of data.dirs) {
+    const open = R.open.has(d.path);
+    h += `<div class="rrow dirrow" data-dir="${esc(d.path)}"><div class="nmcell" style="padding-left:${pad - 14}px">
+        <span class="caret ${open ? "open" : ""}" style="display:inline-flex;width:18px;color:var(--faint)">${icon("chev")}</span>${icon("folder", "fold")}<span class="n">${esc(d.name)}</span></div>
+      <div>${d.new ? `<span class="st newdir">${R.run.dryRun ? "New folder" : "Created"}</span>` : d.gone ? `<span class="st delete">${R.run.dryRun ? "Will delete" : "Deleted"}</span>` : ""}</div>
+      <div class="why">${badgeHTML(d.counts)}</div><div class="sz">${d.counts.bytes ? fmtBytes(d.counts.bytes) : ""}</div></div>`;
+    if (open) h += repRows(d.path, depth + 1);
+  }
+  for (const f of data.files) {
+    h += `<div class="rrow" title="${esc(f.path)}"><div class="nmcell" style="padding-left:${pad + 4}px">
+        <svg class="i" style="color:var(--faint)"><use href="#i-file"/></svg><span class="n">${esc(data.search ? f.path : f.name)}</span></div>
+      <div><span class="st ${f.status}">${esc(L[f.status] || f.status)}</span></div>
+      <div class="why">${esc(whyText(f, cmp))}</div><div class="sz">${f.isDir || (f.status === "delete" && !f.size) ? "" : fmtBytes(f.size)}</div></div>`;
+  }
+  if (data.more > 0) h += `<div class="more-row" style="padding-left:${pad + 24}px">…and ${data.more.toLocaleString()} more file(s) here — use search to find specific ones</div>`;
+  if (!dir && !data.dirs.length && !data.files.length) h += `<div class="empty">${R.q ? "No matching files." : R.filter === "changes" ? "No changes — everything is already in sync." : "Nothing in this category."}</div>`;
+  return h;
+}
+function renderRepTree() { $("#repTree").innerHTML = repRows("", 0); }
+$("#repTree").addEventListener("click", async e => {
+  const row = e.target.closest(".dirrow"); if (!row) return;
+  const d = row.dataset.dir;
+  if (R.open.has(d)) R.open.delete(d);
+  else { R.open.add(d); if (!R.cache.has(d)) await loadRepDir(d); }
+  renderRepTree();
+});
+
+/* ---------------- modals ---------------- */
+function modal(html) {
+  const bg = document.createElement("div"); bg.className = "modal-bg"; bg.innerHTML = html;
+  bg.addEventListener("mousedown", e => { if (e.target === bg) bg.remove(); });
+  $("#modalRoot").appendChild(bg); return bg;
+}
+function confirmModal(title, html, okText, danger) {
+  return new Promise(res => {
+    const bg = modal(`<div class="modal"><h3>${esc(title)}</h3><div>${html}</div>
+      <div class="mbtns"><button class="btn" data-no>Cancel</button><button class="btn ${danger ? "primary" : "primary"}" data-ok ${danger ? 'style="background:var(--bad);border-color:var(--bad);color:#fff"' : ""}>${esc(okText)}</button></div></div>`);
+    $("[data-no]", bg).onclick = () => { bg.remove(); res(false); };
+    $("[data-ok]", bg).onclick = () => { bg.remove(); res(true); };
+  });
+}
+function promptModal(title, html, label, val) {
+  return new Promise(res => {
+    const bg = modal(`<form class="modal"><h3>${esc(title)}</h3><div class="hint" style="margin-bottom:12px">${html}</div>
+      <div class="field"><label>${esc(label)}</label><input required maxlength="255"></div>
+      <div class="mbtns"><button type="button" class="btn" data-no>Cancel</button><button class="btn primary">Create</button></div></form>`);
+    const inp = $("input", bg); inp.value = val; setTimeout(() => inp.focus(), 30);
+    $("[data-no]", bg).onclick = () => { bg.remove(); res(null); };
+    $("form", bg).onsubmit = e => { e.preventDefault(); bg.remove(); res(inp.value.trim()); };
+  });
+}
+function jobModal(j) {
+  return new Promise(res => {
+    const s = j.schedule || {mode: "none", time: "02:00", weekday: 0};
+    const bg = modal(`<form class="modal"><h3>${S.editing ? "Update job" : "Save as job"}</h3>
+      <div class="field"><label>Job name</label><input id="jmName" maxlength="100" placeholder="e.g. Photos backup"></div>
+      <div class="frow">
+        <div class="field"><label>Run</label><select id="jmMode"><option value="none">Manually</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
+        <div class="field" id="jmDayF"><label>Day</label><select id="jmDay">${WEEKDAYS.map((d, i) => `<option value="${i}">${d}</option>`).join("")}</select></div>
+        <div class="field" id="jmTimeF"><label>Time (NAS)</label><input type="time" id="jmTime"></div>
+      </div>
+      <div class="hint">Scheduled runs are skipped (and logged) if the drive isn't connected.</div>
+      <label class="sw" style="margin-top:12px"><input type="checkbox" id="jmAuto"><i></i><span>Run when <b>${esc(j.driveName || "this drive")}</b> is plugged in</span></label>
+      <div class="hint" style="margin-left:44px">Sends a “usbsync will start in ${(S.me && S.me.autoRunDelay != null ? S.me.autoRunDelay : 60)} seconds” notification, then starts this job after that delay (change it in Settings).${S.me && S.me.autoRunOff ? ' <b style="color:var(--warn)">Currently switched off for all jobs in Settings.</b>' : ""}</div>
+      <div class="mbtns"><button type="button" class="btn" data-no>Cancel</button><button class="btn primary">${S.editing ? "Update" : "Save"}</button></div></form>`);
+    $("#jmAuto", bg).checked = !!j.autoRun;
+    $("#jmName", bg).value = j.name || "";
+    $("#jmMode", bg).value = s.mode || "none"; $("#jmTime", bg).value = s.time || "02:00"; $("#jmDay", bg).value = s.weekday || 0;
+    const sync = () => { const m = $("#jmMode", bg).value; $("#jmDayF", bg).classList.toggle("hidden", m !== "weekly"); $("#jmTimeF", bg).classList.toggle("hidden", m === "none"); };
+    $("#jmMode", bg).onchange = sync; sync();
+    setTimeout(() => $("#jmName", bg).focus(), 30);
+    $("[data-no]", bg).onclick = () => { bg.remove(); res(null); };
+    $("form", bg).onsubmit = e => {
+      e.preventDefault();
+      const mode = $("#jmMode", bg).value;
+      bg.remove();
+      res({name: $("#jmName", bg).value.trim(), autoRun: $("#jmAuto", bg).checked, schedule: {mode, time: mode === "none" ? "" : $("#jmTime", bg).value, weekday: +$("#jmDay", bg).value}});
+    };
+  });
+}
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  const m = $$(".modal-bg").pop();
+  if (m) $("[data-no],[data-close]", m)?.click();
+  else if (!$("#report").classList.contains("hidden")) $("#repClose").click();
+});
+
+$("#settingsBtn").onclick = async () => {
+  let st;
+  try { st = await api("GET", "/api/settings"); } catch (e) { toast(e.message, true); return; }
+  const n = st.notify || {}, em = n.email || {}, pb = n.pushbullet || {};
+  const bg = modal(`<form class="modal settings" autocomplete="off"><h3>Settings</h3>
+    <div class="sect">Notifications</div>
+    <div class="hint" style="margin-bottom:8px">Sent when a sync finishes, for every job. Not sent for previews or cancelled runs.</div>
+    <div class="switches" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">
+      <label class="sw"><input type="checkbox" id="nOk"><i></i><span>Successful syncs</span></label>
+      <label class="sw"><input type="checkbox" id="nWarn"><i></i><span>Synced with warnings</span></label>
+      <label class="sw"><input type="checkbox" id="nFail"><i></i><span>Failed syncs</span></label>
+    </div>
+
+    <div class="chan">
+      <label class="sw"><input type="checkbox" id="eOn"><i></i><span><b>Gmail</b></span></label>
+      <div class="chanbody" id="eBody">
+        <div class="field"><label>Gmail address</label><input id="eUser" type="email" placeholder="you@gmail.com" autocomplete="off"></div>
+        <div class="field"><label>Gmail app password</label><input id="ePass" type="password" autocomplete="new-password">
+          <div class="hint" style="margin-top:4px">A 16-letter app password from Google Account › Security › App passwords (needs 2-Step Verification). Your normal Gmail password won't work.</div></div>
+        <div class="field"><label>Send to</label><input id="eTo" placeholder="Same as the Gmail address">
+          <div class="hint" style="margin-top:4px">Separate several addresses with commas.</div></div>
+        <details class="more"><summary>Mail server (pre-set for Gmail)</summary>
+          <div class="frow" style="margin-top:8px"><div class="field" style="flex:3"><label>Server</label><input id="eHost"></div>
+          <div class="field" style="flex:1"><label>Port</label><input id="ePort" type="number" min="1" max="65535"></div></div></details>
+        <button type="button" class="btn sm" id="eTest">Send test email</button> <span class="hint" id="eRes"></span>
+      </div>
+    </div>
+
+    <div class="chan">
+      <label class="sw"><input type="checkbox" id="pOn"><i></i><span><b>Pushbullet</b></span></label>
+      <div class="chanbody" id="pBody">
+        <div class="field"><label>Access token</label><input id="pTok" type="password" autocomplete="new-password">
+          <div class="hint" style="margin-top:4px">From pushbullet.com › Settings › Account › Create Access Token.</div></div>
+        <button type="button" class="btn sm" id="pTest">Send test push</button> <span class="hint" id="pRes"></span>
+      </div>
+    </div>
+
+    <div class="sect">Plugged-in drives</div>
+    <label class="sw"><input type="checkbox" id="setAuto"><i></i><span>Auto-sync when a drive is plugged in</span></label>
+    <div class="hint" style="margin:2px 0 4px 44px">Runs the jobs you've marked “Run when … is plugged in”, after sending a notification. Turn off to pause this for all jobs.</div>
+    <div class="field" style="margin:8px 0 0 44px"><label>Wait before starting</label>
+      <div style="display:flex;align-items:center;gap:8px"><input type="number" id="setDelay" min="0" max="3600" step="1" style="width:110px"> <span class="hint">seconds (0–3600, default 60). Gives you time to cancel from Activity.</span></div></div>
+    <div class="sect">Auto-eject</div>
+    <label class="sw"><input type="checkbox" id="setEject"><i></i><span>Eject the USB drive when a sync finishes</span></label>
+    <div class="hint" style="margin:2px 0 8px 44px">Applies to all jobs. Skipped for previews and cancelled runs, and while another job is still using or about to use the drive.</div>
+    <div class="hint" style="margin-bottom:8px">DSM only lets administrators eject drives, so auto-eject needs a DSM admin account. It's stored on the NAS like your Gmail password, included (encrypted) in settings exports, and also used by the Eject button.</div>
+    <div id="ejStatus" class="hint" style="margin-bottom:8px"></div>
+    <div class="frow"><div class="field"><label>DSM admin username</label><input id="ejUser" autocomplete="off"></div>
+      <div class="field"><label>Password</label><input id="ejPass" type="password" autocomplete="new-password"></div></div>
+    <div class="field hidden" id="ejOtpWrap"><label>Two-factor code (once — DSM will then trust USB Sync)</label><input id="ejOtp" inputmode="numeric" autocomplete="one-time-code"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button type="button" class="btn sm" id="ejSave">Save &amp; check</button>
+      <button type="button" class="linkbtn danger hidden" id="ejRemove">Remove saved account</button><span class="hint" id="ejRes"></span></div>
+    <div class="sect">General</div>
+    <label class="sw"><input type="checkbox" id="setLogin"><i></i><span>Require DSM sign-in</span></label>
+    <div class="hint" style="margin:2px 0 10px 44px">When off, devices on your home network, VPN or Tailscale open USB Sync without signing in. Access from the internet always needs a DSM admin sign-in.</div>
+    <div class="field"><label>Syncs that can run at the same time</label>
+      <select id="setPar">${[1,2,3,4,5,6,7,8].map(x => `<option value="${x}">${x}${x === 3 ? " (default)" : ""}</option>`).join("")}</select>
+      <div class="hint" style="margin-top:4px">Jobs that use the same folders always wait for each other.</div></div>
+    <div class="sect">Backup</div>
+    <div class="hint" style="margin-bottom:8px">One file with all saved jobs and settings. Your Gmail app password, Pushbullet token and auto-eject DSM account are <b>encrypted with a backup password</b> you choose when exporting.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="button" class="btn sm" id="bkExport">${icon("save")}Export settings</button>
+      <label class="btn sm" style="cursor:pointer">${icon("plus")}Import…<input type="file" id="bkFile" accept=".json,application/json" hidden></label>
+    </div>
+    <div class="hint" id="bkRes" style="margin-top:6px"></div>
+    <div class="err" id="setErr"></div>
+    <div class="hint" style="margin-top:8px">Version ${esc(S.me.version)}</div>
+    <div class="mbtns"><button type="button" class="btn" data-no>Cancel</button><button class="btn primary">Save</button></div></form>`);
+  const q = sel => $(sel, bg);
+  q("#nOk").checked = n.onSuccess !== false; q("#nFail").checked = n.onFailure !== false; q("#nWarn").checked = n.onWarning !== false;
+  q("#eOn").checked = !!em.enabled; q("#eUser").value = em.user || "";
+  q("#ePass").placeholder = st.emailPassSet ? "•••••••• saved — leave blank to keep" : "xxxx xxxx xxxx xxxx";
+  q("#eTo").value = (em.to || []).filter(t => t !== em.user).join(", ");
+  q("#eHost").value = em.host || "smtp.gmail.com"; q("#ePort").value = em.port || 587;
+  q("#pOn").checked = !!pb.enabled;
+  q("#pTok").placeholder = st.pushTokenSet ? "•••••••• saved — leave blank to keep" : "o.xxxxxxxxxxxxxxxx";
+  q("#setLogin").checked = st.requireLogin; q("#setPar").value = st.maxParallel || 3; q("#setAuto").checked = !st.autoRunOff; q("#setDelay").value = st.autoRunDelay != null ? st.autoRunDelay : 60;
+  q("#setEject").checked = !!st.autoEject;
+  const ejShow = () => {
+    q("#ejStatus").innerHTML = st.ejectSet ? `${icon("lock")} Saved: <b>${esc(st.eject.user)}</b>${st.ejectTrusted ? " · trusted device (no two-factor code needed)" : ""}` : "No account saved yet.";
+    q("#ejRemove").classList.toggle("hidden", !st.ejectSet);
+    if (st.ejectSet) { q("#ejUser").value = st.eject.user; q("#ejPass").placeholder = "•••••••• saved — leave blank to keep"; }
+  };
+  ejShow();
+  q("#setEject").onchange = () => { if (q("#setEject").checked && !st.ejectSet) { q("#ejRes").textContent = "Save an admin account below first."; q("#ejRes").style.color = "var(--warn)"; q("#ejUser").focus(); } };
+  q("#ejSave").onclick = async () => {
+    q("#ejRes").textContent = "Checking with DSM…"; q("#ejRes").style.color = ""; q("#ejSave").disabled = true;
+    try {
+      const r = await api("POST", "/api/eject/account", {user: q("#ejUser").value.trim(), pass: q("#ejPass").value, otp: q("#ejOtp").value.trim()});
+      st.ejectSet = true; st.ejectTrusted = r.trusted; st.eject = {user: q("#ejUser").value.trim()};
+      q("#ejPass").value = ""; q("#ejOtp").value = ""; q("#ejOtpWrap").classList.add("hidden");
+      q("#ejRes").textContent = "Saved."; q("#ejRes").style.color = "var(--ok)"; ejShow(); S.me.ejectSet = true;
+    } catch (err) {
+      if (err.data && err.data.otp) { q("#ejOtpWrap").classList.remove("hidden"); q("#ejOtp").focus(); }
+      q("#ejRes").textContent = err.message; q("#ejRes").style.color = "var(--bad)";
+    }
+    q("#ejSave").disabled = false;
+  };
+  q("#ejRemove").onclick = async () => {
+    await api("POST", "/api/eject/account", {remove: true}).catch(() => {});
+    st.ejectSet = false; st.ejectTrusted = false; q("#ejUser").value = ""; q("#ejPass").placeholder = ""; S.me.ejectSet = false;
+    q("#setEject").checked = false;
+    q("#ejRes").textContent = "Removed — auto-eject is off."; q("#ejRes").style.color = ""; ejShow();
+  };
+  const showBodies = () => { q("#eBody").classList.toggle("hidden", !q("#eOn").checked); q("#pBody").classList.toggle("hidden", !q("#pOn").checked); };
+  q("#eOn").onchange = q("#pOn").onchange = showBodies; showBodies();
+  const notifyForm = () => ({
+    onSuccess: q("#nOk").checked, onFailure: q("#nFail").checked, onWarning: q("#nWarn").checked,
+    email: {enabled: q("#eOn").checked, user: q("#eUser").value.trim(), pass: q("#ePass").value,
+      to: q("#eTo").value.trim() ? [q("#eTo").value] : [], host: q("#eHost").value.trim(), port: +q("#ePort").value || 587},
+    pushbullet: {enabled: q("#pOn").checked, token: q("#pTok").value.trim()},
+  });
+  const test = async (channel, btn, res) => {
+    q(res).textContent = "Sending…"; q(res).style.color = ""; q(btn).disabled = true;
+    try { await api("POST", "/api/notify/test", {channel, notify: notifyForm()}); q(res).textContent = channel === "email" ? "Sent — check your inbox." : "Sent — check your phone."; q(res).style.color = "var(--ok)"; }
+    catch (err) { q(res).textContent = err.message; q(res).style.color = "var(--bad)"; }
+    q(btn).disabled = false;
+  };
+  q("#eTest").onclick = () => test("email", "#eTest", "#eRes");
+  const bkMsg = (t, c) => { q("#bkRes").textContent = t; q("#bkRes").style.color = c || ""; };
+  q("#bkExport").onclick = () => {
+    const m = modal(`<form class="modal" autocomplete="off"><h3>Export settings</h3>
+      <div class="hint" style="margin-bottom:10px">Choose a password to encrypt the passwords and token in the backup. You'll need it to restore them. <b>It can't be recovered</b> — without it, only the jobs and other settings can be restored.</div>
+      <div class="field"><label>Backup password</label><input id="xp1" type="password" autocomplete="new-password" minlength="8" required></div>
+      <div class="field"><label>Repeat password</label><input id="xp2" type="password" autocomplete="new-password" required></div>
+      <label class="sw" style="margin:2px 0 6px"><input type="checkbox" id="xpShow"><i></i><span>Show password</span></label>
+      <div class="err" id="xpErr"></div>
+      <div class="mbtns"><button type="button" class="btn" data-no>Cancel</button><button class="btn primary" id="xpGo">${icon("save")}Export</button></div></form>`);
+    const mq = x => $(x, m);
+    mq("#xp1").focus();
+    mq("#xpShow").onchange = () => { const t = mq("#xpShow").checked ? "text" : "password"; mq("#xp1").type = t; mq("#xp2").type = t; };
+    mq("[data-no]").onclick = () => m.remove();
+    mq("form").onsubmit = async e => {
+      e.preventDefault(); mq("#xpErr").textContent = "";
+      const pw = mq("#xp1").value;
+      if ([...pw].length < 8) { mq("#xpErr").textContent = "Use at least 8 characters."; return; }
+      if (pw !== mq("#xp2").value) { mq("#xpErr").textContent = "The passwords don't match."; return; }
+      mq("#xpGo").disabled = true; mq("#xpErr").textContent = "";
+      try {
+        const r = await fetch("/api/backup/export", {method: "POST", headers: {"X-USBSync": "1", "Content-Type": "application/json"}, credentials: "same-origin", body: JSON.stringify({password: pw})});
+        if (!r.ok) throw new Error((await r.json()).error || `Error ${r.status}`);
+        const name = (/filename="([^"]+)"/.exec(r.headers.get("Content-Disposition") || "") || [])[1] || "usbsync-settings.json";
+        const url = URL.createObjectURL(await r.blob());
+        const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        m.remove(); bkMsg(`Saved ${name} (passwords encrypted).`, "var(--ok)");
+      } catch (err) { mq("#xpErr").textContent = err.message; mq("#xpGo").disabled = false; }
+    };
+  };
+  q("#bkFile").onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    let data;
+    try { data = JSON.parse(await f.text()); } catch { bkMsg("That file isn't valid JSON.", "var(--bad)"); return; }
+    if (data.app !== "USBSync") { bkMsg("That isn't a USB Sync settings file.", "var(--bad)"); return; }
+    const n = (data.jobs || []).length, enc = !!data.secrets;
+    const m = modal(`<form class="modal" autocomplete="off"><h3>Import settings?</h3>
+      <div><b>${esc(f.name)}</b> has ${n} job${n === 1 ? "" : "s"}${data.exported ? `, exported ${esc(fmtTime(data.exported))}` : ""}.<br><br>Its settings (notifications, options${enc ? ", passwords" : ", password, token"}) <b>replace</b> the current ones. Its jobs are added; jobs with the same ID are updated; your other jobs are kept.</div>
+      ${enc ? `<div class="field" style="margin-top:12px"><label>Backup password</label><input id="ipw" type="password" autocomplete="off"></div>
+      <div class="hint">The password chosen when this file was exported. Forgot it? <b>Import without passwords</b> keeps the ones already saved here; anything left without one is switched off.</div>`
+        : `<div class="hint" style="margin-top:10px">This file was exported by an older version, so its passwords aren't encrypted.</div>`}
+      <div class="err" id="ipErr"></div>
+      <div class="mbtns"><button type="button" class="btn" data-no>Cancel</button>${enc ? `<button type="button" class="btn" id="ipSkip">Import without passwords</button>` : ""}<button class="btn primary" id="ipGo">Import</button></div></form>`);
+    const mq = x => $(x, m);
+    if (enc) mq("#ipw").focus();
+    mq("[data-no]").onclick = () => m.remove();
+    const go = async skip => {
+      mq("#ipErr").textContent = "";
+      if (enc && !skip && !mq("#ipw").value) { mq("#ipErr").textContent = "Enter the backup password, or import without passwords."; return; }
+      m.querySelectorAll(".mbtns button").forEach(b => b.disabled = true);
+      try {
+        const r = await api("POST", "/api/backup/import", {file: data, password: enc && !skip ? mq("#ipw").value : "", skipSecrets: !!skip});
+        m.remove(); bg.remove();
+        const extra = [...(r.skipped && r.skipped.length ? [`${r.skipped.length} job(s) skipped (${r.skipped.join("; ")})`] : []), ...(r.notes || [])];
+        toast(`Imported: ${r.added} job(s) added, ${r.replaced} updated` + (extra.length ? ". " + extra.join(". ") : ""), extra.length > 0);
+        loadJobs(); boot().catch(() => showLogin());
+      } catch (err) {
+        mq("#ipErr").textContent = err.message;
+        m.querySelectorAll(".mbtns button").forEach(b => b.disabled = false);
+        if (err.data && err.data.badPassword) { mq("#ipw").select(); }
+      }
+    };
+    mq("form").onsubmit = e => { e.preventDefault(); go(false); };
+    if (enc) mq("#ipSkip").onclick = () => go(true);
+  };
+  q("#pTest").onclick = () => test("pushbullet", "#pTest", "#pRes");
+  q("[data-no]").onclick = () => bg.remove();
+  q("form").onsubmit = async e => {
+    e.preventDefault(); q("#setErr").textContent = "";
+    try {
+      await api("POST", "/api/settings", {requireLogin: q("#setLogin").checked, maxParallel: +q("#setPar").value, autoRunOff: !q("#setAuto").checked, autoRunDelay: Math.max(0, Math.min(3600, Math.round(+q("#setDelay").value || 0))), autoEject: q("#setEject").checked, notify: notifyForm()});
+      bg.remove(); toast("Settings saved"); boot().catch(() => showLogin());
+    } catch (err) { q("#setErr").textContent = err.message; }
+  };
+};
+
+/* ---------------- boot ---------------- */
+async function boot() {
+  S.me = await api("GET", "/api/me");
+  $("#whoami").textContent = S.me.signedIn ? S.me.user : "";
+  S.permDismissed = !!S.me.permBannerDismissed;
+  $("#logoutBtn").classList.toggle("hidden", !S.me.signedIn);
+  $("#pkgUserName").textContent = S.me.pkgUser;
+  $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  setDir(S.dir, true); syncRuleUI();
+  await Promise.all([loadShares(), loadDrives()]).catch(e => toast(e.message, true));
+  renderAll();
+  loadJobs();
+  pollStatus();
+}
+boot().catch(() => showLogin());
+</script>
+</body>
+</html>
